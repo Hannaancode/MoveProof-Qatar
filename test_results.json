@@ -1,0 +1,99 @@
+{
+  "tests": [
+    {
+      "test": "Dashboard renders",
+      "status": "PASS"
+    },
+    {
+      "test": "New installs start with no fictional inspections",
+      "status": "PASS"
+    },
+    {
+      "test": "Five states are wired",
+      "status": "PASS"
+    },
+    {
+      "test": "Add-apartment form offers required Qatar address fields",
+      "status": "PASS"
+    },
+    {
+      "test": "Custom apartment is available in selector and saved locally",
+      "status": "PASS"
+    },
+    {
+      "test": "Full-photo viewer and uncropped records are wired",
+      "status": "PASS"
+    },
+    {
+      "test": "New inspection creates draft",
+      "status": "PASS"
+    },
+    {
+      "test": "Condition required for finishing",
+      "status": "PASS"
+    },
+    {
+      "test": "Condition description field remains after editing",
+      "status": "PASS"
+    },
+    {
+      "test": "Damaged without photo is blocked",
+      "status": "PASS"
+    },
+    {
+      "test": "Missing photo acknowledgment unblocks",
+      "status": "PASS"
+    },
+    {
+      "test": "Filling incomplete custom item blocks",
+      "status": "PASS"
+    },
+    {
+      "test": "Completing all selected items unblocks",
+      "status": "PASS"
+    },
+    {
+      "test": "Save draft persists to local storage",
+      "status": "PASS"
+    },
+    {
+      "test": "Finishing creates a new inspection record",
+      "status": "PASS"
+    },
+    {
+      "test": "Condition description is stored on a completed record",
+      "status": "PASS"
+    },
+    {
+      "test": "One genuine record does not claim a comparison",
+      "status": "PASS"
+    },
+    {
+      "test": "Two genuine opposite-type records show comparison",
+      "status": "PASS"
+    },
+    {
+      "test": "No-record state appears",
+      "status": "PASS"
+    },
+    {
+      "test": "Legacy 2025 demo records are removed on upgrade without deleting real inspections",
+      "status": "PASS"
+    },
+    {
+      "test": "Static camera permission and gallery controls exist",
+      "status": "PASS"
+    },
+    {
+      "test": "Android targets API 36 with CAMERA permission",
+      "status": "PASS"
+    },
+    {
+      "test": "Simulated JS camera open and photo capture",
+      "status": "PASS"
+    }
+  ],
+  "passed": 23,
+  "total": 23,
+  "notes": "Source-level and simulated-camera tests, NOT a compiled APK or real Android device test."
+}
