@@ -11,6 +11,15 @@ This repository contains the Android Studio project; APKs are produced by the bu
 5. Connect your Android phone via USB, enable **Developer options → USB debugging**, then install from Android Studio's Run button. Or copy the APK to your phone and allow installation from that source.
 6. Alternatively, open this folder in Android Studio (choose the folder containing `settings.gradle`) and use **Build → Build APK(s)**. If Android Studio requests a Gradle installation, use the provided build script.
 
+## Version 0.7 — in-app video recording and deletion confirmation (November 2026)
+
+- **In-app video camera:** Removed the unreliable Android `ACTION_VIDEO_CAPTURE` handoff. Recording now uses a dedicated first-party CameraX screen with a live viewfinder and Start recording / Stop & save controls. A **long press** on the photograph shutter starts recording automatically; the **Record video** button opens the video recorder ready for a tap to start. Recording is limited to **30 seconds** and saved as an **MP4** in **Gallery → Movies → MoveProof Qatar** by Android MediaStore, not in localStorage. Photographs still work as before. **Video clips are silent for now**; microphone capture is deliberately not requested in this prototype.
+- **Record deletion:** Each saved move-in or move-out item card has an independent trash icon. An in-app confirmation dialog identifies the property, room, item, inspection type and date, with **Cancel** and **Delete record** actions. It removes just that item from the saved inspection while leaving other items intact. If the deleted item was its final entry, the now-empty inspection is removed from Previous Records. Deleting an inspection link **does not delete any video file from Gallery**.
+- **Draft deletion:** Replaced the WebView's unreliable JavaScript `confirm()` call with the same in-app confirmation dialog. Drafts are not removed until Delete draft is explicitly pressed.
+- The Android package ID and localStorage key are unchanged; `versionCode 7` and `versionName 0.7.0` allow updates in place when Android signing certificates match. No cloud backup is included.
+
+**Testing:** `node run_source_tests.js` checks deletion confirmation, cancellation, per-item deletion, video integration and existing inspection flows. CI compiles the Android debug APK. Native video capture still requires verification on an actual Android device, including Gallery playback and phone permissions. Do not rely on this prototype as your sole backup of rental evidence.
+
 ## Version 0.6 — video, move-out tracking, home navigation and typography (November 2026)
 
 - **Home navigation:** Every secondary screen now includes a direct Home icon. Leaving a draft via Home saves it rather than discarding it. Finishing an inspection opens a success screen with **Return to Main Menu** and **View saved inspection**.
@@ -89,7 +98,7 @@ The helper cannot wirelessly install until the device is correctly paired, autho
 
 ## Design and privacy notes
 
-- The native code grants WebView camera-preview access for the bundled secure origin; a limited JavaScript interface launches the system camera for Gallery videos and opens saved video URIs. It never directly requests microphone permission because the external camera app handles recording.
+- The native code grants WebView camera-preview access for the bundled secure origin; a limited JavaScript interface opens the first-party CameraX video screen and launches playback for saved Gallery videos. No microphone permission is requested; videos in this prototype are silent.
 - The WebView loads bundled content via `WebViewAssetLoader` using the recommended local HTTPS origin. Remote navigation and subresource requests are blocked. `INTERNET` permission is not declared.
 - A standard Android system file picker is used for Gallery. No broad photo/media storage permission is requested.
 - Saved inspection data and compressed photos use WebView localStorage; video content is instead written to the shared Gallery and referenced by URI. This remains a **coursework prototype**, not durable evidence storage. Uninstalling or clearing app data deletes inspection records (even if Gallery videos remain). No login, cloud backup, server or export exists.
@@ -100,4 +109,4 @@ The helper cannot wirelessly install until the device is correctly paired, autho
 
 ## Verification performed
 
-Version 0.6 passes 50 source-level/simulated-camera tests. The automated GitHub Actions build compiles the APK using Android API 36 and Gradle 8.13; source tests and build results should be confirmed in Actions. Real-device verification of native Gallery video capture, playback, and storage is required on your Samsung before sharing beyond testing.
+Version 0.7 runs additional source-level and simulated-camera regression tests, including cancel/confirm deletion and first-party recorder wiring. The automated GitHub Actions build compiles the APK using Android API 36 and Gradle 8.13; source tests and build results should be confirmed in Actions. Real-device verification of native Gallery video capture, playback, and storage is required on your Samsung before sharing beyond testing.

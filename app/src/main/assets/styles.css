@@ -73,3 +73,16 @@
 .capture-helper{font-size:11px;color:var(--secondary);margin:8px 0}.video-evidence{display:flex;align-items:center;flex-wrap:wrap;gap:7px;border-top:1px solid var(--line);padding-top:11px;margin-top:12px}.video-evidence .small-meta{flex:1;min-width:155px}.video-saved{font-size:11px;font-weight:750;color:var(--green);display:flex;align-items:center;gap:5px;width:100%}.record-video{border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:9px;align-items:center;justify-content:space-between;padding:13px 14px}.record-video span{font-size:11px;color:var(--secondary);display:flex;align-items:center;gap:5px}.record-video button{white-space:nowrap}
 .video-shutter-hint{color:#ebdbe5;text-align:center;font-size:11px;margin:3px 0 10px;letter-spacing:normal}.camera-shutter{touch-action:manipulation;-webkit-touch-callout:none;user-select:none}.camera-video-btn{color:#fff;background:#ffffff22;border-color:#ffffff50;min-height:42px;padding:7px 9px;font-size:12px}.camera-actions{justify-content:space-between}.camera-actions>.camera-cancel,.camera-actions>.camera-video-btn{max-width:100px}
 @media(max-width:360px){.nav-header{gap:7px}.back-icon,.home-icon{min-width:38px;width:38px;height:38px}.history-item small{font-size:10px}.camera-actions>.camera-cancel,.camera-actions>.camera-video-btn{font-size:11px;padding:6px}}
+
+/* v0.7 — explicit, accessible delete confirmations and record-specific delete action. */
+.delete-record-icon{border:1px solid #f2d6dd;border-radius:10px;background:#fff7f8;color:#9d314c;min-width:36px;min-height:36px;display:grid;place-items:center;padding:6px;flex:none}
+.delete-record-icon:active{background:#f7e0e6}
+.record-head{gap:9px}.record-head small{margin-left:auto}.record-head h3{min-width:0}
+.confirm-dialog{position:fixed;inset:0;width:min(92vw,410px);max-width:410px;max-height:min(86vh,600px);margin:auto;padding:0;border:0;border-radius:20px;background:#fff;color:var(--ink);box-shadow:0 22px 90px #22132357;overflow:auto}
+.confirm-dialog::backdrop{background:#101218ad}
+.confirm-panel{padding:25px 21px 23px;text-align:center}
+.confirm-mark{margin:0 auto 13px;width:44px;height:44px;border-radius:50%;background:#fff1f3;border:1px solid #f2d2d9;color:#a22e4c;font-size:28px;font-weight:800;display:grid;place-items:center}
+.confirm-panel h2{font-size:19px;margin:0 0 9px;line-height:1.3;font-weight:800}
+.confirm-panel p{font-size:13px;line-height:1.6;color:var(--secondary);margin:0 0 23px;overflow-wrap:anywhere}
+.confirm-actions{display:flex;gap:10px}.confirm-actions>*{flex:1;min-width:0}
+.danger-btn{background:#a52f4b;color:#fff}.danger-btn:hover:not(:disabled){background:#832239}

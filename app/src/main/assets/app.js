@@ -96,14 +96,65 @@ function resumeDraft(draftId){
  data.returnReview=false;
  persist();nav('rooms');
 }
+// An app-owned modal is required because the WebView does not implement onJsConfirm.
+// Never delete a record or draft until the user presses the dialog's Delete button.
+const confirmDialog=document.getElementById('confirm-dialog');
+let pendingDeletion=null;
+function requestDeletion(request,title,message){
+ if(confirmDialog.open)return;
+ pendingDeletion=request;
+ document.getElementById('confirm-title').textContent=title;
+ document.getElementById('confirm-description').textContent=message;
+ document.getElementById('confirm-accept').textContent=request.kind==='draft'?'Delete draft':'Delete record';
+ confirmDialog.showModal();
+ document.getElementById('confirm-cancel').focus();
+}
 function deleteDraft(draftId){
  const draft=data.drafts.find(d=>d.id===draftId);
  if(!draft)return;
- if(!confirm(`Delete this ${draft.type==='move-out'?'move-out':'move-in'} draft for ${propName(draft.propertyId)}? This cannot be undone.`))return;
- data.drafts=data.drafts.filter(d=>d.id!==draftId);
- if(data.draft?.id===draftId){data.draft=null;data.selectedKey=null}
- persist();render();toast('Draft deleted');
+ requestDeletion({kind:'draft',id:draftId},'Delete this draft?',
+  `Delete the unfinished ${draft.type==='move-out'?'move-out':'move-in'} inspection for ${propName(draft.propertyId)}? Its saved conditions and photos will be removed from the app. This cannot be undone.`);
 }
+function deleteRecord(recordId,itemKey){
+ const record=data.records.find(r=>r.id===recordId&&r.propertyId===data.recordsProperty);
+ if(!record||!savedItemsInRecord(record).some(item=>item.key===itemKey))return;
+ const item=parseKey(itemKey);
+ requestDeletion({kind:'record',id:recordId,key:itemKey},'Delete this saved record?',
+  `Delete the ${record.type==='move-in'?'move-in':'move-out'} record for ${item.name} in ${item.room}, ${propName(record.propertyId)}, dated ${fmtDate(record.date)}? Other items in the inspection will remain. Any Gallery video will stay on your phone. This cannot be undone.`);
+}
+function executeDeletion(){
+ const request=pendingDeletion;
+ pendingDeletion=null;
+ if(confirmDialog.open)confirmDialog.close();
+ if(!request)return;
+ if(request.kind==='draft'){
+  const draft=data.drafts.find(d=>d.id===request.id);
+  if(!draft)return;
+  const oldDrafts=data.drafts,oldActive=data.draft,oldKey=data.selectedKey;
+  data.drafts=data.drafts.filter(d=>d.id!==request.id);
+  if(data.draft?.id===request.id){data.draft=null;data.selectedKey=null}
+  if(!persist()){data.drafts=oldDrafts;data.draft=oldActive;data.selectedKey=oldKey;return}
+  render();toast('Draft deleted');
+ }else if(request.kind==='record'){
+  const idx=data.records.findIndex(r=>r.id===request.id);
+  if(idx<0)return;
+  const rec=data.records[idx];
+  const remaining=(rec.items||[]).filter(item=>item.key!==request.key);
+  if(remaining.length===(rec.items||[]).length)return;
+  const oldRecords=data.records,oldFinished=data.lastFinishedId;
+  data.records=data.records.map((r,i)=>i===idx?{...r,items:remaining}:r).filter(r=>Array.isArray(r.items)&&r.items.length>0);
+  if(!data.records.some(r=>r.id===data.lastFinishedId))data.lastFinishedId=null;
+  if(!persist()){data.records=oldRecords;data.lastFinishedId=oldFinished;return}
+  if(data.page==='record-detail'){
+   const history=savedRecordsForProperty(data.recordsProperty).some(r=>savedItemsInRecord(r).some(item=>item.key===data.recordsItem));
+   nav(history?'record-detail':'record-items');
+  }else render();
+  toast('Saved record deleted. Other inspection items were kept.');
+ }
+}
+document.getElementById('confirm-cancel').addEventListener('click',()=>{pendingDeletion=null;confirmDialog.close()});
+document.getElementById('confirm-accept').addEventListener('click',executeDeletion);
+confirmDialog.addEventListener('close',()=>{if(!confirmDialog.open)pendingDeletion=null});
 function draftsPage(){
  const saved=[...data.drafts].sort((a,b)=>new Date(b.updatedAt||b.startedAt)-new Date(a.updatedAt||a.startedAt));
  return `${header()}<div class="page">${navhead('Saved drafts','Continue an unfinished inspection or delete a draft')}
@@ -181,7 +232,7 @@ function getKeysForProp(property){
  const standard=ROOMS.flatMap(room=>room.items.map(name=>itemKey(room.name,name)));
  return [...standard.filter(key=>keys.has(key)),...[...keys].filter(key=>!standard.includes(key)).sort((a,b)=>a.localeCompare(b))];
 }
-function recordHtml(rec,item){const src=rec.items.find(it=>it.key===item);if(!src)return '';return `<article class="record-card"><div class="record-head"><h3>${rec.type==='move-in'?'Move-in':'Move-out'}</h3><small>${fmtDate(rec.date)} ${rec.demo?'· Demo':''}</small></div><div class="record-preview">${src.photo?`<button type="button" class="record-photo-button" data-a="view-photo" data-v="${escapeHtml(rec.id)}" data-k="${escapeHtml(item)}" aria-label="View complete saved photo and zoom"><img src="${src.photo}" alt="Saved condition photograph"><span class="preview-caption">${ico('search',14)} View full photo · zoom</span></button>`:`<div class="no-photo-label">${ico('image',28)}<span>No photo attached</span><small>Condition recorded in writing</small></div>`}</div><div class="record-pairs"><div><span>Condition</span><p><strong>${escapeHtml(src.condition||'Not recorded')}</strong></p></div><div><span>Condition description</span><p>${src.description?escapeHtml(src.description):'No description recorded'}</p></div><div><span>Notes</span><p>${src.notes?escapeHtml(src.notes):'No notes recorded'}</p></div>${src.ack?`<div><span>Evidence</span><p>No visual evidence — explicitly acknowledged</p></div>`:''}</div>${src.videoUri?`<div class="record-video"><span>${ico('video',18)} Video stored in the phone's Gallery</span><button type="button" class="outline-btn button-inline" data-a="play-video" data-v="${escapeHtml(src.videoUri)}">${ico('video',16)} Play saved video</button></div>`:''}</article>`}
+function recordHtml(rec,item){const src=rec.items.find(it=>it.key===item);if(!src)return '';return `<article class="record-card"><div class="record-head"><h3>${rec.type==='move-in'?'Move-in':'Move-out'}</h3><small>${fmtDate(rec.date)} ${rec.demo?'· Demo':''}</small><button type="button" class="delete-record-icon" data-a="delete-record" data-v="${escapeHtml(rec.id)}" data-k="${escapeHtml(item)}" aria-label="Delete this ${rec.type==='move-in'?'move-in':'move-out'} record for ${escapeHtml(parseKey(item).name)}" title="Delete record">${ico('trash',16)}</button></div><div class="record-preview">${src.photo?`<button type="button" class="record-photo-button" data-a="view-photo" data-v="${escapeHtml(rec.id)}" data-k="${escapeHtml(item)}" aria-label="View complete saved photo and zoom"><img src="${src.photo}" alt="Saved condition photograph"><span class="preview-caption">${ico('search',14)} View full photo · zoom</span></button>`:`<div class="no-photo-label">${ico('image',28)}<span>No photo attached</span><small>Condition recorded in writing</small></div>`}</div><div class="record-pairs"><div><span>Condition</span><p><strong>${escapeHtml(src.condition||'Not recorded')}</strong></p></div><div><span>Condition description</span><p>${src.description?escapeHtml(src.description):'No description recorded'}</p></div><div><span>Notes</span><p>${src.notes?escapeHtml(src.notes):'No notes recorded'}</p></div>${src.ack?`<div><span>Evidence</span><p>No visual evidence — explicitly acknowledged</p></div>`:''}</div>${src.videoUri?`<div class="record-video"><span>${ico('video',18)} Video stored in the phone's Gallery</span><button type="button" class="outline-btn button-inline" data-a="play-video" data-v="${escapeHtml(src.videoUri)}">${ico('video',16)} Play saved video</button></div>`:''}</article>`}
 function recordsProperties(){
  const properties=data.properties.map(property=>({property,records:savedRecordsForProperty(property.id),state:moveOutState(property.id)})).filter(entry=>entry.records.length>0);
  return `${header()}<div class="page">${navhead('Previous records','Select a property to browse its inspection history')}<div class="eyebrow">Inspection history</div><h2 class="flow-title">Choose a property</h2><p class="subhead">Only properties with completed inspections appear here. Properties with missing move-out records are marked below.</p>
@@ -281,13 +332,13 @@ async function openCamera(){data.photoError='';if(!window.isSecureContext||!navi
 function resizePhoto(src,maxWidth=1300,quality=.72){return new Promise((resolve,reject)=>{const img=new Image();img.onload=()=>{try{const factor=Math.min(1,maxWidth/Math.max(img.naturalWidth,img.naturalHeight));const w=Math.max(1,Math.round(img.naturalWidth*factor));const h=Math.max(1,Math.round(img.naturalHeight*factor));const cv=document.createElement('canvas');cv.width=w;cv.height=h;cv.getContext('2d').drawImage(img,0,0,w,h);resolve(cv.toDataURL('image/jpeg',quality))}catch(e){reject(e)}};img.onerror=()=>reject(Error('Unable to read photo'));img.src=src})}
 function capture(){if(!data.cameraStream||video.readyState<2){document.getElementById('camera-hint').textContent='Camera is still starting. Try again.';return}try{const cv=document.createElement('canvas');const srcW=video.videoWidth,srcH=video.videoHeight;if(!srcW||!srcH)throw Error('Camera did not provide a frame');const scale=Math.min(1,1300/Math.max(srcW,srcH));cv.width=Math.round(srcW*scale);cv.height=Math.round(srcH*scale);cv.getContext('2d').drawImage(video,0,0,cv.width,cv.height);const d=detail();d.photo=cv.toDataURL('image/jpeg',.7);d.skipPhoto=false;d.ack=false;stopCamera();data.photoError='';persist();render();toast('Photo captured from camera')}catch(e){stopCamera();data.photoError='Photo capture failed. Please retry.';render()}}
 function pickGallery(){gallery.value='';gallery.click()}
-function launchNativeVideo(){
+function launchNativeVideo(autoStart=false){
  const bridge=window.MoveProofVideo;
  if(!bridge||typeof bridge.recordVideo!=='function'){toast('Video capture is available in the Android app on your phone.');return}
  if(!data.draft||!data.selectedKey){toast('Choose an item before recording video.');return}
  const draftId=data.draft.id,key=data.selectedKey;
  stopCamera();
- try{bridge.recordVideo(draftId,key)}catch(_){toast('Could not open the video recorder. Try again.')}
+ try{bridge.recordVideo(draftId,key,autoStart)}catch(_){toast('Could not open the video recorder. Try again.')}
 }
 window.moveProofVideoSaved=function(draftId,key,uri){
  if(typeof uri!=='string'||!/^content:\/\/media\//.test(uri))return;
@@ -300,9 +351,9 @@ window.moveProofVideoSaved=function(draftId,key,uri){
 };
 window.moveProofVideoError=function(message){toast(String(message||'Video was not saved.').slice(0,180))};
 function playSavedVideo(uri){const bridge=window.MoveProofVideo;if(!bridge?.openVideo){toast('Open this video on an Android phone.');return}try{bridge.openVideo(uri)}catch(_){toast('Unable to open this video.')}}
-// Short press captures a photo. Long press opens the system video recorder.
+// Short press captures a photo. Long press starts our in-app CameraX recorder.
 const shutter=document.getElementById('camera-shutter');let pressTimer=null,pressActive=false,longPressed=false;
-shutter.addEventListener('pointerdown',e=>{if(e.button!==0&&e.pointerType==='mouse')return;pressActive=true;longPressed=false;clearTimeout(pressTimer);pressTimer=setTimeout(()=>{if(pressActive){longPressed=true;pressActive=false;launchNativeVideo()}},550)});
+shutter.addEventListener('pointerdown',e=>{if(e.button!==0&&e.pointerType==='mouse')return;pressActive=true;longPressed=false;clearTimeout(pressTimer);pressTimer=setTimeout(()=>{if(pressActive){longPressed=true;pressActive=false;launchNativeVideo(true)}},550)});
 shutter.addEventListener('pointerup',()=>{if(!pressActive)return;pressActive=false;clearTimeout(pressTimer);if(!longPressed)capture()});
 shutter.addEventListener('pointercancel',()=>{pressActive=false;clearTimeout(pressTimer)});
 shutter.addEventListener('contextmenu',e=>e.preventDefault());
@@ -338,6 +389,7 @@ case 'new':startNew();break;
 case 'drafts':nav('drafts');break;
 case 'resume-draft':resumeDraft(v);break;
 case 'delete-draft':deleteDraft(v);break;
+case 'delete-record':deleteRecord(v,button.dataset.k);break;
 case 'learn-more':nav('learn-more');break;
 case 'records':data.recordsProperty=data.propertyId;data.recordsRoom='';nav('record-properties');break;
  case 'record-moveout-all':{const state=moveOutState(data.recordsProperty);startMoveOutFromHistory(data.recordsProperty,state.missing);break}

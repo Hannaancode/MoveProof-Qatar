@@ -54,9 +54,17 @@ test('Resuming first draft does not remove second',()=>{
  assert.equal(run('data.draft.id'),first);
  assert.equal(run('data.drafts.length'),2);
 });
-test('Deleting one draft preserves other',()=>{
+test('Draft deletion requires explicit in-app confirmation, with Cancel as the default',()=>{
  const second=run('data.drafts[1].id');
  run(`deleteDraft('${second}')`);
+ assert.equal(el('confirm-dialog').open,true);
+ assert.match(el('confirm-description').textContent,/cannot be undone/);
+ assert.equal(run('data.drafts.length'),2);
+ el('confirm-cancel').handlers.click();
+ assert.equal(el('confirm-dialog').open,false);
+ assert.equal(run('data.drafts.length'),2);
+ run(`deleteDraft('${second}')`);
+ el('confirm-accept').handlers.click();
  assert.equal(run('data.drafts.length'),1);
  assert.notEqual(run('data.drafts[0].id'),second);
 });
@@ -181,6 +189,10 @@ test('Legacy 2025 demo records are removed on upgrade without deleting real insp
  assert.equal(vm.runInContext('data.records.length',legacyVM),1);
  assert.doesNotMatch(el('app').innerHTML,/Comparison available|2025/);
 });
+// Migration tests instantiate a second VM with the mock DOM. Restore the primary
+// VM's modal handlers before interacting with the original app instance.
+el('confirm-accept').handlers.click=()=>run('executeDeletion()');
+el('confirm-cancel').handlers.click=()=>run('confirmDialog.close()');
 // v0.6 regression tests: home navigation, linked move-outs, native Gallery video.
 test('Every secondary screen has immediate Main Menu access',()=>{
  for(const page of ['rooms','condition','review','drafts','learn-more','record-properties','record-items','record-detail','completed']){
@@ -258,11 +270,19 @@ test('Damaged item with saved video counts as visual evidence',()=>{
 });
 test('Record Video sends the draft and item identifiers to native Android',()=>{
  run("data.drafts=[];data.draft=null;data.propertyId='al-sadd';data.type='move-in';startNew()");
- const calls=[];ctx.window.MoveProofVideo={recordVideo:(draftId,key)=>calls.push({draftId,key}),openVideo:()=>{}};
+ const calls=[];ctx.window.MoveProofVideo={recordVideo:(draftId,key,autoStart)=>calls.push({draftId,key,autoStart}),openVideo:()=>{}};
  run('launchNativeVideo()');
  assert.equal(calls.length,1);
  assert.equal(calls[0].draftId,run('data.draft.id'));
  assert.equal(calls[0].key,'Bedroom::Wardrobe');
+ assert.equal(calls[0].autoStart,false);
+ delete ctx.window.MoveProofVideo;
+});
+test('Long press initiates in-app recorder with immediate recording',()=>{
+ const calls=[];ctx.window.MoveProofVideo={recordVideo:(draftId,key,autoStart)=>calls.push({draftId,key,autoStart})};
+ run("data.drafts=[];data.draft=null;startNew();launchNativeVideo(true)");
+ assert.equal(calls.length,1);
+ assert.equal(calls[0].autoStart,true);
  delete ctx.window.MoveProofVideo;
 });
 test('Unlinking video keeps the original Gallery file untouched',()=>{
@@ -274,14 +294,70 @@ test('Unlinking video keeps the original Gallery file untouched',()=>{
  assert.match(el('app').innerHTML,/Record video/);
  delete ctx.window.MoveProofVideo;
 });
-test('Video gallery implementation is native and camera shutter describes holding',()=>{
- const java=fs.readFileSync(path.join(__dirname,'app/src/main/java/qa/moveproof/inspection/MainActivity.java'),'utf8');
+test('Saved-record card shows a delete button scoped to its own item',()=>withHistory([
+ makeRecord('group-in','al-sadd',[makeItem('Bedroom::Wardrobe'),makeItem('Bedroom::AC')]),
+],()=>{
+ run("data.recordsProperty='al-sadd';data.recordsItem='Bedroom::Wardrobe';nav('record-detail')");
+ assert.match(el('app').innerHTML,/data-a="delete-record" data-v="group-in" data-k="Bedroom::Wardrobe"/);
+ assert.match(el('app').innerHTML,/Delete this move-in record/);
+}));
+test('Record deletion prompts and Cancel leaves every saved item untouched',()=>withHistory([
+ makeRecord('group-in','al-sadd',[makeItem('Bedroom::Wardrobe'),makeItem('Bedroom::AC')]),
+],()=>{
+ run("data.recordsProperty='al-sadd';data.recordsItem='Bedroom::Wardrobe';nav('record-detail')");
+ run("deleteRecord('group-in','Bedroom::Wardrobe')");
+ assert.equal(el('confirm-dialog').open,true);
+ assert.match(el('confirm-description').textContent,/Other items in the inspection will remain/);
+ assert.equal(run('data.records[0].items.length'),2);
+ el('confirm-cancel').handlers.click();
+ assert.equal(el('confirm-dialog').open,false);
+ assert.equal(run('data.records[0].items.length'),2);
+}));
+test('Confirmed record deletion removes only chosen entry and keeps others',()=>withHistory([
+ makeRecord('group-in','al-sadd',[makeItem('Bedroom::Wardrobe'),makeItem('Bedroom::AC')]),
+],()=>{
+ run("data.recordsProperty='al-sadd';data.recordsItem='Bedroom::Wardrobe';nav('record-detail')");
+ run("deleteRecord('group-in','Bedroom::Wardrobe')");
+ el('confirm-accept').handlers.click();
+ assert.equal(run('data.records.length'),1);
+ assert.equal(run('data.records[0].items.length'),1);
+ assert.equal(run("data.records[0].items[0].key"),'Bedroom::AC');
+ assert.equal(run('data.page'),'record-items');
+ assert.match(storage.get('moveproof-qatar-prototype-v1'),/Bedroom::AC/);
+}));
+test('Confirmed deletion of final recorded item removes empty inspection and its listing',()=>withHistory([
+ makeRecord('only-in','al-sadd',[makeItem('Bedroom::Wardrobe')]),
+],()=>{
+ run("data.recordsProperty='al-sadd';data.recordsItem='Bedroom::Wardrobe';nav('record-detail')");
+ run("deleteRecord('only-in','Bedroom::Wardrobe')");
+ el('confirm-accept').handlers.click();
+ assert.equal(run('data.records.length'),0);
+ run("nav('record-properties')");
+ assert.match(el('app').innerHTML,/No saved inspections yet/);
+}));
+test('Both delete types use a confirmation dialog rather than JS confirm()',()=>{
  const html=fs.readFileSync(path.join(__dirname,'app/src/main/assets/index.html'),'utf8');
- assert.match(java,/MediaStore\.ACTION_VIDEO_CAPTURE/);
- assert.match(java,/MediaStore\.Video\.Media\.IS_PENDING/);
- assert.match(java,/MoveProof Qatar/);
+ assert.match(html,/id="confirm-dialog"/);
+ assert.match(html,/id="confirm-cancel"/);
+ assert.match(html,/id="confirm-accept"/);
+ assert.doesNotMatch(code,/\bif\(!confirm\(/);
+});
+test('Video recording is first-party CameraX, saving MP4 to phone Gallery',()=>{
+ const java=fs.readFileSync(path.join(__dirname,'app/src/main/java/qa/moveproof/inspection/MainActivity.java'),'utf8');
+ const recorder=fs.readFileSync(path.join(__dirname,'app/src/main/java/qa/moveproof/inspection/VideoCaptureActivity.java'),'utf8');
+ const manifest=fs.readFileSync(path.join(__dirname,'app/src/main/AndroidManifest.xml'),'utf8');
+ const html=fs.readFileSync(path.join(__dirname,'app/src/main/assets/index.html'),'utf8');
+ const gradle=fs.readFileSync(path.join(__dirname,'app/build.gradle'),'utf8');
+ assert.match(java,/new Intent\(this, VideoCaptureActivity\.class\)/);
+ assert.doesNotMatch(java,/MediaStore\.ACTION_VIDEO_CAPTURE/);
+ assert.match(recorder,/VideoCapture\.withOutput\(recorder\)/);
+ assert.match(recorder,/MediaStoreOutputOptions\.Builder/);
+ assert.match(recorder,/Environment\.DIRECTORY_MOVIES \+ "\/MoveProof Qatar"/);
+ assert.match(recorder,/\.setDurationLimitMillis\(30_000\)/);
+ assert.match(manifest,/android:name="\.VideoCaptureActivity" android:exported="false"/);
+ assert.match(gradle,/androidx\.camera:camera-video/);
  assert.match(java,/@JavascriptInterface/);
- assert.match(html,/Hold to open video recorder/);
+ assert.match(html,/Hold to start video/);
  assert.match(html,/id="camera-shutter"/);
 });
 test('Uppercase UI labels no longer use excessive letter spacing',()=>{

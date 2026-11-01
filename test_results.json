@@ -41,7 +41,7 @@
       "status": "PASS"
     },
     {
-      "test": "Deleting one draft preserves other",
+      "test": "Draft deletion requires explicit in-app confirmation, with Cancel as the default",
       "status": "PASS"
     },
     {
@@ -177,11 +177,35 @@
       "status": "PASS"
     },
     {
+      "test": "Long press initiates in-app recorder with immediate recording",
+      "status": "PASS"
+    },
+    {
       "test": "Unlinking video keeps the original Gallery file untouched",
       "status": "PASS"
     },
     {
-      "test": "Video gallery implementation is native and camera shutter describes holding",
+      "test": "Saved-record card shows a delete button scoped to its own item",
+      "status": "PASS"
+    },
+    {
+      "test": "Record deletion prompts and Cancel leaves every saved item untouched",
+      "status": "PASS"
+    },
+    {
+      "test": "Confirmed record deletion removes only chosen entry and keeps others",
+      "status": "PASS"
+    },
+    {
+      "test": "Confirmed deletion of final recorded item removes empty inspection and its listing",
+      "status": "PASS"
+    },
+    {
+      "test": "Both delete types use a confirmation dialog rather than JS confirm()",
+      "status": "PASS"
+    },
+    {
+      "test": "Video recording is first-party CameraX, saving MP4 to phone Gallery",
       "status": "PASS"
     },
     {
@@ -201,7 +225,7 @@
       "status": "PASS"
     }
   ],
-  "passed": 50,
-  "total": 50,
+  "passed": 56,
+  "total": 56,
   "notes": "Source-level and simulated-camera tests, NOT a compiled APK or real Android device test."
 }

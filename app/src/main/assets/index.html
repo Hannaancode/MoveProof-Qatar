@@ -20,7 +20,7 @@
     <div class="camera-header"><span class="camera-eyebrow">MOVEPROOF · CAMERA</span><button class="icon-btn on-dark" data-camera="close" aria-label="Close camera">✕</button></div>
     <div class="camera-video-wrap"><video id="camera-video" autoplay muted playsinline aria-label="Live camera preview"></video><div class="camera-crosshair" aria-hidden="true"></div></div>
     <p id="camera-hint" class="camera-hint">Position the item clearly in the frame.</p>
-    <p class="video-shutter-hint">Tap for photo · Hold to open video recorder</p>
+    <p class="video-shutter-hint">Tap for photo · Hold to start video · tap Stop to save</p>
     <div class="camera-actions"><button class="secondary-btn camera-cancel" data-camera="close">Cancel</button><button id="camera-shutter" type="button" class="camera-shutter" data-camera="capture" aria-label="Tap to take photo, hold to open video recorder"><span></span></button><button type="button" class="secondary-btn camera-video-btn" data-camera="record-video" aria-label="Open phone video recorder">Video</button></div>
   </dialog>
   <dialog id="photo-dialog" class="photo-dialog" aria-label="Full photo viewer">
@@ -29,5 +29,16 @@
     <div class="photo-view-controls"><button type="button" data-photo="out" aria-label="Zoom out">−</button><output id="photo-zoom-value">100%</output><button type="button" data-photo="in" aria-label="Zoom in">+</button><button type="button" data-photo="reset">Fit</button></div>
   </dialog>
   <input type="file" id="gallery-input" accept="image/*" hidden aria-label="Choose photograph from device">
+  <dialog id="confirm-dialog" class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-description">
+    <div class="confirm-panel">
+      <div class="confirm-mark" aria-hidden="true">!</div>
+      <h2 id="confirm-title">Confirm deletion</h2>
+      <p id="confirm-description">This cannot be undone.</p>
+      <div class="confirm-actions">
+        <button type="button" id="confirm-cancel" class="outline-btn">Cancel</button>
+        <button type="button" id="confirm-accept" class="action-btn danger-btn">Delete</button>
+      </div>
+    </div>
+  </dialog>
 </body>
 </html>

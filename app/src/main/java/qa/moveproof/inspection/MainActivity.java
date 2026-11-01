@@ -2,19 +2,11 @@ package qa.moveproof.inspection;
 
 import android.Manifest;
 import android.app.Activity;
-import android.content.ClipData;
-import android.content.ContentValues;
-import android.content.ContentResolver;
-import android.content.ActivityNotFoundException;
 import android.database.Cursor;
-import android.os.Environment;
 import android.os.ParcelFileDescriptor;
-import android.provider.MediaStore;
 import android.provider.OpenableColumns;
 import android.webkit.JavascriptInterface;
 import org.json.JSONObject;
-import java.io.InputStream;
-import java.io.OutputStream;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -44,7 +36,6 @@ public class MainActivity extends Activity {
     private static final int REQUEST_GALLERY = 102;
     private static final int REQUEST_VIDEO = 103;
     private static final int REQUEST_VIDEO_CAMERA_PERMISSION = 104;
-    private Uri pendingVideoUri;
     private String videoDraftId;
     private String videoItemKey;
     private boolean videoCaptureActive = false;
@@ -127,8 +118,8 @@ public class MainActivity extends Activity {
     }
 
     private final class VideoBridge {
-        @JavascriptInterface public void recordVideo(String draftId, String itemKey) {
-            runOnUiThread(() -> beginVideoCapture(draftId, itemKey));
+        @JavascriptInterface public void recordVideo(String draftId, String itemKey, boolean autoStart) {
+            runOnUiThread(() -> beginVideoCapture(draftId, itemKey, autoStart));
         }
         @JavascriptInterface public void openVideo(String uriString) {
             runOnUiThread(() -> openSavedVideo(uriString));
@@ -140,13 +131,16 @@ public class MainActivity extends Activity {
         if (webView != null) webView.evaluateJavascript(js, null);
     }
 
-    private void beginVideoCapture(String draftId, String itemKey) {
+    private boolean videoAutoStart;
+
+    private void beginVideoCapture(String draftId, String itemKey, boolean autoStart) {
         if (videoCaptureActive || videoDraftId != null) { videoNotice("A recording is already being opened."); return; }
         if (draftId == null || draftId.length() > 200 || itemKey == null || itemKey.length() > 200 || !itemKey.contains("::")) {
             videoNotice("Invalid inspection item."); return;
         }
         videoDraftId = draftId;
         videoItemKey = itemKey;
+        videoAutoStart = autoStart;
         if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             requestPermissions(new String[]{Manifest.permission.CAMERA}, REQUEST_VIDEO_CAMERA_PERMISSION);
             return;
@@ -155,40 +149,17 @@ public class MainActivity extends Activity {
     }
 
     private void launchVideoCamera() {
-        // On Android 10+ the output is created in shared Movies/MoveProof Qatar.
-        // The phone's camera writes there, and the Gallery can later delete the video.
-        Uri output = null;
+        // Use our own CameraX screen. No external camera app or ACTION_VIDEO_CAPTURE
+        // is involved, so vendor-specific video intents cannot interrupt recording.
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                ContentValues values = new ContentValues();
-                values.put(MediaStore.Video.Media.DISPLAY_NAME, "MoveProof_" + System.currentTimeMillis() + ".mp4");
-                values.put(MediaStore.Video.Media.MIME_TYPE, "video/mp4");
-                values.put(MediaStore.Video.Media.RELATIVE_PATH, Environment.DIRECTORY_MOVIES + "/MoveProof Qatar");
-                values.put(MediaStore.Video.Media.IS_PENDING, 1);
-                output = getContentResolver().insert(MediaStore.Video.Media.EXTERNAL_CONTENT_URI, values);
-                if (output == null) throw new IllegalStateException("Could not reserve Gallery video file");
-            }
-            Intent intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
-            intent.putExtra(MediaStore.EXTRA_DURATION_LIMIT, 30);
-            intent.putExtra(MediaStore.EXTRA_VIDEO_QUALITY, 1);
-            if (output != null) {
-                intent.putExtra(MediaStore.EXTRA_OUTPUT, output);
-                intent.setClipData(ClipData.newUri(getContentResolver(), "MoveProof video", output));
-                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-            }
-            pendingVideoUri = output;
             videoCaptureActive = true;
-            startActivityForResult(intent, REQUEST_VIDEO);
-        } catch (Exception e) {
-            if (output != null) removeVideoOutput(output);
+            Intent recorder = new Intent(this, VideoCaptureActivity.class);
+            recorder.putExtra("autoStartRecording", videoAutoStart);
+            startActivityForResult(recorder, REQUEST_VIDEO);
+        } catch (Exception ex) {
             clearVideoCapture();
-            videoNotice("The video camera could not open. Check camera permission and try again.");
+            videoNotice("Video recording could not open. Please try again.");
         }
-    }
-
-    private void removeVideoOutput(Uri uri) {
-        if (uri == null) return;
-        try { getContentResolver().delete(uri, null, null); } catch (Exception ignored) {}
     }
 
     private boolean videoHasBytes(Uri uri) {
@@ -202,74 +173,49 @@ public class MainActivity extends Activity {
         return false;
     }
 
-    private void copyVideo(Uri source, Uri destination) throws java.io.IOException {
-        try (InputStream input = getContentResolver().openInputStream(source);
-             OutputStream output = getContentResolver().openOutputStream(destination, "w")) {
-            if (input == null || output == null) throw new java.io.IOException("Unable to copy recorded video");
-            byte[] buffer = new byte[32768];
-            int read;
-            while ((read = input.read(buffer)) != -1) output.write(buffer, 0, read);
-            output.flush();
-        }
-    }
-
     private void finishVideoCapture(int resultCode, Intent result) {
-        Uri destination = pendingVideoUri;
-        String draftId = videoDraftId, itemKey = videoItemKey;
-        Uri returned = result == null ? null : result.getData();
-        Uri saved = null;
-        try {
-            if (resultCode == RESULT_OK) {
-                if (destination != null) {
-                    if (!videoHasBytes(destination) && returned != null && !returned.equals(destination)) {
-                        // Some camera apps disregard EXTRA_OUTPUT; recover into our Gallery file.
-                        copyVideo(returned, destination);
-                    }
-                    if (!videoHasBytes(destination)) throw new java.io.IOException("Camera returned an empty video");
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        ContentValues done = new ContentValues();
-                        done.put(MediaStore.Video.Media.IS_PENDING, 0);
-                        getContentResolver().update(destination, done, null, null);
-                    }
-                    saved = destination;
-                } else if (returned != null && videoHasBytes(returned)) {
-                    // Android 8-9: the system camera stores to its own Gallery location.
-                    saved = returned;
-                }
-            }
-        } catch (Exception ignored) {
-            saved = null;
+        String draftId = videoDraftId;
+        String itemKey = videoItemKey;
+        Uri saved = result != null ? result.getData() : null;
+        clearVideoCapture();
+        if (resultCode != RESULT_OK) {
+            videoNotice("Recording canceled. Nothing was added to the inspection.");
+            return;
         }
-        if (saved == null) {
-            removeVideoOutput(destination);
-            if (resultCode == RESULT_OK) videoNotice("Video was not saved. Please try again.");
-            else videoNotice("Video recording canceled. Nothing was added to the inspection.");
-        } else if (draftId != null && itemKey != null && webView != null) {
-            String js = "if(window.moveProofVideoSaved)window.moveProofVideoSaved(" + JSONObject.quote(draftId) + "," + JSONObject.quote(itemKey) + "," + JSONObject.quote(saved.toString()) + ")";
+        if (saved == null || !"content".equals(saved.getScheme()) ||
+            !"media".equals(saved.getAuthority()) || !videoHasBytes(saved)) {
+            videoNotice("The recorded video could not be verified in Gallery.");
+            return;
+        }
+        if (draftId != null && itemKey != null && webView != null) {
+            String js = "if(window.moveProofVideoSaved)window.moveProofVideoSaved(" +
+                JSONObject.quote(draftId) + "," + JSONObject.quote(itemKey) + "," +
+                JSONObject.quote(saved.toString()) + ")";
             webView.evaluateJavascript(js, null);
         }
-        clearVideoCapture();
     }
 
     private void clearVideoCapture() {
-        pendingVideoUri = null;
         videoDraftId = null;
         videoItemKey = null;
+        videoAutoStart = false;
         videoCaptureActive = false;
     }
 
     private void openSavedVideo(String uriString) {
         try {
             Uri uri = Uri.parse(uriString);
-            if (!"content".equals(uri.getScheme()) || !"media".equals(uri.getAuthority())) throw new SecurityException("Only shared Gallery videos are supported");
+            if (!"content".equals(uri.getScheme()) || !"media".equals(uri.getAuthority())) {
+                throw new SecurityException("Only shared Gallery videos are supported");
+            }
             try (ParcelFileDescriptor file = getContentResolver().openFileDescriptor(uri, "r")) {
                 if (file == null) throw new java.io.FileNotFoundException("Video is missing");
             }
             Intent view = new Intent(Intent.ACTION_VIEW);
-            view.setDataAndType(uri, "video/*");
+            view.setDataAndType(uri, "video/mp4");
             view.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
             startActivity(view);
-        } catch (Exception e) {
+        } catch (Exception ex) {
             videoNotice("Video unavailable. It may have been deleted from Gallery.");
         }
     }
@@ -323,7 +269,7 @@ public class MainActivity extends Activity {
 
     @Override public void onBackPressed() {
         // The five screens are SPA states, so WebView history alone does not navigate them.
-        webView.evaluateJavascript("(function(){if(typeof data==='undefined'||typeof nav!=='function')return 'close';if(typeof photoDialog!=='undefined'&&photoDialog.open){closePhoto();return 'handled'};if(typeof dlg!=='undefined'&&dlg.open){stopCamera();return 'handled'};if(data.page==='dashboard')return 'close';if(data.page==='condition'){nav(data.returnReview?'review':'rooms')}else if(data.page==='review'){nav('rooms')}else{nav('dashboard')}return 'handled'})()", answer -> {
+        webView.evaluateJavascript("(function(){if(typeof data==='undefined'||typeof nav!=='function')return 'close';if(typeof photoDialog!=='undefined'&&photoDialog.open){closePhoto();return 'handled'};if(typeof dlg!=='undefined'&&dlg.open){stopCamera();return 'handled'};if(typeof confirmDialog!=='undefined'&&confirmDialog.open){confirmDialog.close();return 'handled'};if(data.page==='dashboard')return 'close';if(data.page==='condition'){nav(data.returnReview?'review':'rooms')}else if(data.page==='review'){nav('rooms')}else{nav('dashboard')}return 'handled'})()", answer -> {
             if ("\"close\"".equals(answer)) MainActivity.super.onBackPressed();
         });
     }
