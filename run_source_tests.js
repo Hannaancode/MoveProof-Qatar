@@ -78,7 +78,7 @@ test('Save draft persists to local storage',()=>{run('persist()');assert.ok(stor
 test('Finishing creates a new inspection record',()=>{const before=run('data.records.length');run('finish()');assert.equal(run('data.records.length'),before+1);assert.equal(run('data.draft'),null)});
 test('Condition description is stored on a completed record',()=>{const r=run('data.records[data.records.length-1]');assert.ok(r.items.some(x=>x.description!==undefined))});
 test('One genuine record does not claim a comparison',()=>{run("data.recordsProperty='al-sadd';data.recordsItem='Bedroom::Wardrobe';nav('record-detail')");assert.doesNotMatch(el('app').innerHTML,/Comparison available/);assert.match(el('app').innerHTML,/No move-out record/);assert.match(el('app').innerHTML,/No photo attached/)});
-test('Two genuine opposite-type records show comparison',()=>{run("data.records.push({id:'real-out',propertyId:'al-sadd',type:'move-out',date:new Date().toISOString(),items:[{key:'Bedroom::Wardrobe',room:'Bedroom',name:'Wardrobe',condition:'Good',photo:null}]});nav('record-detail')");assert.match(el('app').innerHTML,/Comparison available/)});
+test('Unlinked legacy move-out never creates an unverified comparison',()=>{run("data.records.push({id:'real-out',propertyId:'al-sadd',type:'move-out',date:new Date().toISOString(),items:[{key:'Bedroom::Wardrobe',room:'Bedroom',name:'Wardrobe',condition:'Good',photo:null}]});nav('record-detail')");assert.doesNotMatch(el('app').innerHTML,/Comparison available/);assert.match(el('app').innerHTML,/rental periods are not confirmed/) });
 test('No-record state appears',()=>{run("data.recordsItem='Bedroom::AC';nav('record-detail')");assert.match(el('app').innerHTML,/No record available/)});
 test('Property-first history and item navigation are rendered separately',()=>{
  run("data.recordsProperty='al-sadd';nav('record-properties')");
@@ -93,7 +93,7 @@ test('Every recorded version remains visible, not just latest',()=>{
  run("data.records.push({id:'older-in',propertyId:'al-sadd',type:'move-in',date:'2026-09-01T12:00:00Z',items:[{key:'Bedroom::Wardrobe',room:'Bedroom',name:'Wardrobe',condition:'Unsure'}]});data.recordsItem='Bedroom::Wardrobe';nav('record-detail')");
  assert.match(el('app').innerHTML,/01 Sept 2026/);
  assert.match(el('app').innerHTML,/Unsure/);
- assert.match(el('app').innerHTML,/Comparison available/);
+ assert.match(el('app').innerHTML,/rental periods are not confirmed/);
 });
 // Regression tests: Previous Records must contain only completed, recorded evidence.
 function withHistory(records, fn){
@@ -128,7 +128,7 @@ test('Only recorded rooms and items are shown, retaining expandable room control
  run("data.recordsProperty='al-sadd';data.recordsRoom='';nav('record-items')");
  let html=el('app').innerHTML;
  assert.match(html,/Bedroom/);
- assert.match(html,/1 item recorded/);
+ assert.match(html,/1 awaiting move-out/);
  assert.equal((html.match(/data-a="toggle-record-room"/g)||[]).length,1);
  assert.doesNotMatch(html,/(<strong>Kitchen<\/strong>|<strong>Living Room<\/strong>|0 items recorded)/);
  run("data.recordsRoom='Bedroom';render()");html=el('app').innerHTML;
@@ -157,7 +157,7 @@ test('Direct navigation to an unrecorded property or item still gives an empty s
 test('Legacy single draft migrates into collection on reload',()=>{
  const existing={properties:[{id:'al-sadd',name:'Al Sadd Apartment'}],draft:{id:'legacy-draft',propertyId:'al-sadd',type:'move-in',startedAt:'2026-10-01',selected:['Bedroom::Wardrobe'],custom:[],details:{'Bedroom::Wardrobe':{condition:'Good',description:'Still intact'}}},records:[]};
  const migrationStorage=new Map([['moveproof-qatar-prototype-v1',JSON.stringify(existing)]]);
- const legacyCtx={...ctx,localStorage:{getItem:k=>migrationStorage.get(k)||null,setItem:(k,v)=>migrationStorage.set(k,v)}};
+ const legacyCtx={...ctx,window:{...ctx.window},localStorage:{getItem:k=>migrationStorage.get(k)||null,setItem:(k,v)=>migrationStorage.set(k,v)}};
  legacyCtx.globalThis=legacyCtx;
  vm.runInContext(code,vm.createContext(legacyCtx));
  const persisted=JSON.parse(migrationStorage.get('moveproof-qatar-prototype-v1'));
@@ -171,7 +171,7 @@ test('Legacy 2025 demo records are removed on upgrade without deleting real insp
   {id:'my-real-2026',demo:false,propertyId:'al-sadd',type:'move-in',date:'2026-10-31',items:[{key:'Bedroom::Wardrobe',room:'Bedroom',name:'Wardrobe',condition:'Good',photo:null}]}
  ]};
  const migrationStorage=new Map([['moveproof-qatar-prototype-v1',JSON.stringify(legacy)]]);
- const legacyCtx={...ctx,localStorage:{getItem:k=>migrationStorage.get(k)||null,setItem:(k,v)=>migrationStorage.set(k,v)}};
+ const legacyCtx={...ctx,window:{...ctx.window},localStorage:{getItem:k=>migrationStorage.get(k)||null,setItem:(k,v)=>migrationStorage.set(k,v)}};
  legacyCtx.globalThis=legacyCtx;
  const legacyVM=vm.createContext(legacyCtx);
  vm.runInContext(code,legacyVM);
@@ -180,6 +180,113 @@ test('Legacy 2025 demo records are removed on upgrade without deleting real insp
  assert.equal(clean.records[0].id,'my-real-2026');
  assert.equal(vm.runInContext('data.records.length',legacyVM),1);
  assert.doesNotMatch(el('app').innerHTML,/Comparison available|2025/);
+});
+// v0.6 regression tests: home navigation, linked move-outs, native Gallery video.
+test('Every secondary screen has immediate Main Menu access',()=>{
+ for(const page of ['rooms','condition','review','drafts','learn-more','record-properties','record-items','record-detail','completed']){
+   if(['rooms','condition','review'].includes(page)&&!run('data.draft'))run("data.propertyId='al-sadd';data.type='move-in';startNew()");
+   run(`data.page='${page}';render()`);
+   assert.match(el('app').innerHTML,/aria-label="Go directly to main menu"/,`Home not available on ${page}`);
+ }
+});
+test('Finishing an inspection opens a success screen with direct home',()=>{
+ run("data.drafts=[];data.draft=null;data.propertyId='west-bay';data.type='move-in';startNew();data.selectedKey='Bedroom::Wardrobe';detail().condition='Good';finish()");
+ assert.equal(run('data.page'),'completed');
+ assert.match(el('app').innerHTML,/Inspection saved successfully/);
+ assert.match(el('app').innerHTML,/Return to Main Menu/);
+ assert.match(el('app').innerHTML,/View saved inspection/);
+});
+test('Leaving an unfinished inspection via Home preserves the draft',()=>{
+ run("data.drafts=[];data.draft=null;data.propertyId='al-sadd';data.type='move-in';startNew();detail().condition='Good';nav('dashboard')");
+ assert.equal(run('data.drafts.length'),1);
+ assert.equal(run('data.draft.details["Bedroom::Wardrobe"].condition'),'Good');
+ assert.ok(JSON.parse(storage.get('moveproof-qatar-prototype-v1')).drafts.length===1);
+});
+test('Move-out progress uses latest move-in and does not count unrelated older move-outs',()=>withHistory([
+ {...makeRecord('old-in','al-sadd',[makeItem('Bedroom::Wardrobe')]),date:'2026-01-01T12:00:00Z',rentalPeriodId:'old-period'},
+ {...makeRecord('old-out','al-sadd',[makeItem('Bedroom::Wardrobe')],'move-out'),date:'2026-02-01T12:00:00Z',rentalPeriodId:'old-period'},
+ {...makeRecord('new-in','al-sadd',[makeItem('Bedroom::Wardrobe'),makeItem('Kitchen::Countertop')]),date:'2026-11-01T12:00:00Z',rentalPeriodId:'new-period'},
+],()=>{
+ assert.equal(run("moveOutState('al-sadd').missing.length"),2);
+ run("data.recordsProperty='al-sadd';nav('record-items')");
+ assert.match(el('app').innerHTML,/0\/2/);
+ assert.match(el('app').innerHTML,/Document remaining 2 items/);
+}));
+test('Move-out batch preselects outstanding baseline items including custom items',()=>withHistory([
+ {...makeRecord('new-in','al-sadd',[makeItem('Bedroom::Wardrobe'),makeItem('Balcony::Railing')]),rentalPeriodId:'batch-period'},
+],()=>{
+ run("startMoveOutFromHistory('al-sadd',moveOutState('al-sadd').missing)");
+ assert.equal(run('data.page'),'rooms');
+ assert.equal(run('data.type'),'move-out');
+ assert.equal(run('data.draft.rentalPeriodId'),'batch-period');
+ assert.equal(run('data.draft.selected.length'),2);
+ assert.ok(run("data.draft.custom.some(it=>it.room==='Balcony'&&it.name==='Railing')"));
+ assert.match(el('app').innerHTML,/Balcony/);
+}));
+test('Single-item move-out opens condition screen with original reference',()=>withHistory([
+ {...makeRecord('new-in','al-sadd',[makeItem('Bedroom::Wardrobe','Damaged')]),rentalPeriodId:'one-period'},
+],()=>{
+ run("data.drafts=[];data.draft=null;startMoveOutFromHistory('al-sadd',['Bedroom::Wardrobe'])");
+ assert.equal(run('data.page'),'condition');
+ assert.match(el('app').innerHTML,/Recorded at move-in/);
+ assert.match(el('app').innerHTML,/Test condition/);
+ assert.equal(run('data.draft.type'),'move-out');
+}));
+test('Finishing linked move-out updates the checklist and comparison state',()=>withHistory([
+ {...makeRecord('baseline','al-sadd',[makeItem('Bedroom::Wardrobe'),makeItem('Kitchen::Countertop')]),rentalPeriodId:'lease-123'},
+],()=>{
+ run("data.drafts=[];data.draft=null;startMoveOutFromHistory('al-sadd',['Bedroom::Wardrobe']);detail().condition='Good';finish()");
+ assert.equal(run("moveOutState('al-sadd').done.length"),1);
+ assert.equal(run("moveOutState('al-sadd').missing.length"),1);
+ assert.equal(run('data.page'),'completed');
+ run("data.recordsProperty='al-sadd';data.recordsItem='Bedroom::Wardrobe';nav('record-detail')");
+ assert.match(el('app').innerHTML,/Comparison available/);
+ assert.doesNotMatch(el('app').innerHTML,/Record move-out condition/);
+}));
+test('Video evidence attaches as Gallery URI and does not insert video bytes into local storage',()=>{
+ run("data.drafts=[];data.draft=null;data.propertyId='al-sadd';data.type='move-in';startNew()");
+ run("nav('condition')");
+ const draftId=run('data.draft.id');const item='Bedroom::Wardrobe';
+ run(`window.moveProofVideoSaved('${draftId}','${item}','content://media/external/video/media/12345')`);
+ assert.equal(run('data.draft.details["Bedroom::Wardrobe"].videoUri'),'content://media/external/video/media/12345');
+ assert.match(el('app').innerHTML,/Play video/);
+ assert.ok(storage.get('moveproof-qatar-prototype-v1').includes('content://media/'));
+});
+test('Damaged item with saved video counts as visual evidence',()=>{
+ run("data.selectedKey='Bedroom::Wardrobe';detail().condition='Damaged';detail().photo=null;detail().videoUri='content://media/external/video/media/123';detail().ack=false");
+ assert.equal(run('checkDraft().canFinish'),true);
+});
+test('Record Video sends the draft and item identifiers to native Android',()=>{
+ run("data.drafts=[];data.draft=null;data.propertyId='al-sadd';data.type='move-in';startNew()");
+ const calls=[];ctx.window.MoveProofVideo={recordVideo:(draftId,key)=>calls.push({draftId,key}),openVideo:()=>{}};
+ run('launchNativeVideo()');
+ assert.equal(calls.length,1);
+ assert.equal(calls[0].draftId,run('data.draft.id'));
+ assert.equal(calls[0].key,'Bedroom::Wardrobe');
+ delete ctx.window.MoveProofVideo;
+});
+test('Unlinking video keeps the original Gallery file untouched',()=>{
+ run("data.selectedKey='Bedroom::Wardrobe';nav('condition');detail().videoUri='content://media/external/video/media/555'");
+ const bridge={openVideo:()=>{throw Error('Should not delete a video')},recordVideo:()=>{}};
+ ctx.window.MoveProofVideo=bridge;
+ run("detail().videoUri=null;persist();render()");
+ assert.equal(run('detail().videoUri'),null);
+ assert.match(el('app').innerHTML,/Record video/);
+ delete ctx.window.MoveProofVideo;
+});
+test('Video gallery implementation is native and camera shutter describes holding',()=>{
+ const java=fs.readFileSync(path.join(__dirname,'app/src/main/java/qa/moveproof/inspection/MainActivity.java'),'utf8');
+ const html=fs.readFileSync(path.join(__dirname,'app/src/main/assets/index.html'),'utf8');
+ assert.match(java,/MediaStore\.ACTION_VIDEO_CAPTURE/);
+ assert.match(java,/MediaStore\.Video\.Media\.IS_PENDING/);
+ assert.match(java,/MoveProof Qatar/);
+ assert.match(java,/@JavascriptInterface/);
+ assert.match(html,/Hold to open video recorder/);
+ assert.match(html,/id="camera-shutter"/);
+});
+test('Uppercase UI labels no longer use excessive letter spacing',()=>{
+ const css=fs.readFileSync(path.join(__dirname,'app/src/main/assets/styles.css'),'utf8');
+ assert.doesNotMatch(css,/letter-spacing:1\.[3-9]px|letter-spacing:2px/);
 });
 test('Static camera permission and gallery controls exist',()=>{const main=fs.readFileSync(path.join(__dirname,'app/src/main/java/qa/moveproof/inspection/MainActivity.java'),'utf8');assert.match(main,/RESOURCE_VIDEO_CAPTURE/);assert.match(main,/onShowFileChooser/);assert.match(main,/onRequestPermissionsResult/)});
 test('Android targets API 36 with CAMERA permission',()=>{assert.match(fs.readFileSync(path.join(__dirname,'app/build.gradle'),'utf8'),/targetSdk 36/);assert.match(fs.readFileSync(path.join(__dirname,'app/src/main/AndroidManifest.xml'),'utf8'),/android\.permission\.CAMERA/)});

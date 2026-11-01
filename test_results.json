@@ -93,7 +93,7 @@
       "status": "PASS"
     },
     {
-      "test": "Two genuine opposite-type records show comparison",
+      "test": "Unlinked legacy move-out never creates an unverified comparison",
       "status": "PASS"
     },
     {
@@ -137,6 +137,58 @@
       "status": "PASS"
     },
     {
+      "test": "Every secondary screen has immediate Main Menu access",
+      "status": "PASS"
+    },
+    {
+      "test": "Finishing an inspection opens a success screen with direct home",
+      "status": "PASS"
+    },
+    {
+      "test": "Leaving an unfinished inspection via Home preserves the draft",
+      "status": "PASS"
+    },
+    {
+      "test": "Move-out progress uses latest move-in and does not count unrelated older move-outs",
+      "status": "PASS"
+    },
+    {
+      "test": "Move-out batch preselects outstanding baseline items including custom items",
+      "status": "PASS"
+    },
+    {
+      "test": "Single-item move-out opens condition screen with original reference",
+      "status": "PASS"
+    },
+    {
+      "test": "Finishing linked move-out updates the checklist and comparison state",
+      "status": "PASS"
+    },
+    {
+      "test": "Video evidence attaches as Gallery URI and does not insert video bytes into local storage",
+      "status": "PASS"
+    },
+    {
+      "test": "Damaged item with saved video counts as visual evidence",
+      "status": "PASS"
+    },
+    {
+      "test": "Record Video sends the draft and item identifiers to native Android",
+      "status": "PASS"
+    },
+    {
+      "test": "Unlinking video keeps the original Gallery file untouched",
+      "status": "PASS"
+    },
+    {
+      "test": "Video gallery implementation is native and camera shutter describes holding",
+      "status": "PASS"
+    },
+    {
+      "test": "Uppercase UI labels no longer use excessive letter spacing",
+      "status": "PASS"
+    },
+    {
       "test": "Static camera permission and gallery controls exist",
       "status": "PASS"
     },
@@ -149,7 +201,7 @@
       "status": "PASS"
     }
   ],
-  "passed": 37,
-  "total": 37,
+  "passed": 50,
+  "total": 50,
   "notes": "Source-level and simulated-camera tests, NOT a compiled APK or real Android device test."
 }

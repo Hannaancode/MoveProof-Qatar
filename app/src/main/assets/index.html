@@ -20,7 +20,8 @@
     <div class="camera-header"><span class="camera-eyebrow">MOVEPROOF · CAMERA</span><button class="icon-btn on-dark" data-camera="close" aria-label="Close camera">✕</button></div>
     <div class="camera-video-wrap"><video id="camera-video" autoplay muted playsinline aria-label="Live camera preview"></video><div class="camera-crosshair" aria-hidden="true"></div></div>
     <p id="camera-hint" class="camera-hint">Position the item clearly in the frame.</p>
-    <div class="camera-actions"><button class="secondary-btn camera-cancel" data-camera="close">Cancel</button><button class="camera-shutter" data-camera="capture" aria-label="Capture photograph"><span></span></button><span class="camera-spacer" aria-hidden="true"></span></div>
+    <p class="video-shutter-hint">Tap for photo · Hold to open video recorder</p>
+    <div class="camera-actions"><button class="secondary-btn camera-cancel" data-camera="close">Cancel</button><button id="camera-shutter" type="button" class="camera-shutter" data-camera="capture" aria-label="Tap to take photo, hold to open video recorder"><span></span></button><button type="button" class="secondary-btn camera-video-btn" data-camera="record-video" aria-label="Open phone video recorder">Video</button></div>
   </dialog>
   <dialog id="photo-dialog" class="photo-dialog" aria-label="Full photo viewer">
     <div class="photo-view-head"><span id="photo-caption">Saved photograph</span><button type="button" class="photo-view-close" data-photo="close" aria-label="Close full photograph">✕</button></div>

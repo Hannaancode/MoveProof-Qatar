@@ -1,6 +1,6 @@
 # MoveProof Qatar — Android inspection prototype
 
-This is an **Android Studio project**, not yet a built APK. It embeds the five-screen HTML/CSS/JS interface and supports native Android camera and gallery permission handling. It does not need a server or a Play Console account for testing.
+This repository contains the Android Studio project; APKs are produced by the build script or GitHub Actions, and are not directly included in source control. It embeds the five-screen HTML/CSS/JS interface and supports native Android camera and gallery permission handling. It does not need a server or a Play Console account for testing.
 
 ## How to build an APK on Windows (free)
 
@@ -10,6 +10,19 @@ This is an **Android Studio project**, not yet a built APK. It embeds the five-s
 4. The installable file appears at `app/build/outputs/apk/debug/app-debug.apk`.
 5. Connect your Android phone via USB, enable **Developer options → USB debugging**, then install from Android Studio's Run button. Or copy the APK to your phone and allow installation from that source.
 6. Alternatively, open this folder in Android Studio (choose the folder containing `settings.gradle`) and use **Build → Build APK(s)**. If Android Studio requests a Gradle installation, use the provided build script.
+
+## Version 0.6 — video, move-out tracking, home navigation and typography (November 2026)
+
+- **Home navigation:** Every secondary screen now includes a direct Home icon. Leaving a draft via Home saves it rather than discarding it. Finishing an inspection opens a success screen with **Return to Main Menu** and **View saved inspection**.
+- **Move-out checklist:** Previous Records shows an outstanding-item count for properties with saved move-in inspections. Selecting a property shows a progress bar, each recorded item's move-out status, and **Document remaining items**. On an individual item, **Record move-out condition** opens that specific item, with the original move-in condition displayed as reference. Batch move-out drafts automatically preselect only outstanding items, including custom items.
+- **Rental-period safety:** The app links newly recorded move-outs to the chosen move-in period. It intentionally does not treat legacy move-out records with no period identifier as confirmed matches; this prevents a past tenant's move-out from falsely satisfying a new tenancy. Historic entries remain visible for manual review.
+- **Video:** From the condition screen, select **Record video**, or open **Take photo** and hold the shutter to launch the native Android video recorder. A normal tap still takes a photograph. Videos up to a requested 30-second limit are saved in **Gallery → Movies/MoveProof Qatar** using Android MediaStore and the native camera app, not as video bytes in localStorage. Each inspection saves only the video URI; **Play video** opens the Gallery video player. **Unlink** removes it from the inspection but leaves the Gallery file untouched. Deleting it in Gallery can make the record's video link unavailable. If the video camera ignores the output URI, the app attempts to copy the returned video into its Gallery file.
+- **Typography:** Removed excessive positive letter spacing from uppercase labels throughout the interface without affecting heading typography.
+- Bumped Android version to `versionCode 6` / `versionName 0.6.0`, kept application ID and WebView local-storage key unchanged. No cloud backup is added in this prototype.
+
+**Important:** Gallery clips are independent of app backup and are not automatically synchronized to a second phone; local inspection records remain only on the original device. This version is intended for Android phone testing; validate video recording on a real device before relying on it. It may launch the system camera to press Record/Stop after a long press rather than recording continuously during the press. The camera's duration limit is a request and can be ignored by camera apps.
+
+**Windows phone update:** From Android Studio's Terminal run `git pull origin main` and then `cmd /c REBUILD_AND_UPDATE_PHONE.bat`. If existing app data matters, do not uninstall the app. Debug APKs generated on GitHub and a local Windows PC usually have different debug signing keys and may not update each other in place.
 
 ## Version 0.5 — show only recorded history (November 2026)
 
@@ -76,10 +89,10 @@ The helper cannot wirelessly install until the device is correctly paired, autho
 
 ## Design and privacy notes
 
-- The native code grants only WebView **video** access for the app's bundled secure origin. It never requests microphone access.
+- The native code grants WebView camera-preview access for the bundled secure origin; a limited JavaScript interface launches the system camera for Gallery videos and opens saved video URIs. It never directly requests microphone permission because the external camera app handles recording.
 - The WebView loads bundled content via `WebViewAssetLoader` using the recommended local HTTPS origin. Remote navigation and subresource requests are blocked. `INTERNET` permission is not declared.
 - A standard Android system file picker is used for Gallery. No broad photo/media storage permission is requested.
-- Saved data and compressed photos use WebView localStorage; this is suitable for a **coursework prototype**, not durable evidence storage. Uninstalling or clearing app data deletes the records. No login, cloud backup, server or export exists.
+- Saved inspection data and compressed photos use WebView localStorage; video content is instead written to the shared Gallery and referenced by URI. This remains a **coursework prototype**, not durable evidence storage. Uninstalling or clearing app data deletes inspection records (even if Gallery videos remain). No login, cloud backup, server or export exists.
 - There are no preloaded inspection records; sample property names (Al Sadd and West Bay) are still placeholders and UI design choices remain provisional.
 - Package id `qa.moveproof.inspection` is a *temporary test identifier*. It is not a verified registered brand/domain or an approved final app ID.
 - API 36 target for Google Play's 2026 requirement; minimum Android 8.0 (API 26).
@@ -87,4 +100,4 @@ The helper cannot wirelessly install until the device is correctly paired, autho
 
 ## Verification performed
 
-Version 0.4 passed 32 source-level tests and 8 browser interaction checks (dashboard, guide, property creation, inspection completion, three-step history, empty state, multiple drafts, persistence, JavaScript errors). The Android SDK and Gradle are not available in this build environment, so **the version 0.4 native APK has not been compiled or tested on physical Android hardware**. Build and verify on the Windows PC with Android Studio and the paired phone.
+Version 0.6 passes 50 source-level/simulated-camera tests. The automated GitHub Actions build compiles the APK using Android API 36 and Gradle 8.13; source tests and build results should be confirmed in Actions. Real-device verification of native Gallery video capture, playback, and storage is required on your Samsung before sharing beyond testing.

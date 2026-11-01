@@ -46,7 +46,7 @@ jobs:
       - name: Make APK available for download
         uses: actions/upload-artifact@v4
         with:
-          name: MoveProof-Qatar-v0.5-test-apk
+          name: MoveProof-Qatar-v0.6-test-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
