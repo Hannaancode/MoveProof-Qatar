@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#6b193a">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="MoveProof">
+  <meta name="format-detection" content="telephone=no">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" href="./icon-192.png">
+  <link rel="apple-touch-icon" href="./icon-180.png">
+  <meta name="description" content="MoveProof Qatar – local rental property condition inspection prototype">
+  <title>MoveProof Qatar · iPhone Test</title>
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="pwa-media.js"></script>
+  <script defer src="app.js"></script>
+  <script defer src="pwa-init.js"></script>
+</head>
+<body>
+  <div class="ambient ambient-one" aria-hidden="true"></div>
+  <div class="ambient ambient-two" aria-hidden="true"></div>
+  <div class="app-frame">
+    <main id="app" class="app-surface" aria-live="off"></main>
+  </div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <dialog id="camera-dialog" class="camera-dialog" aria-label="Camera capture">
+    <div class="camera-header"><span class="camera-eyebrow">MOVEPROOF · CAMERA</span><button class="icon-btn on-dark" data-camera="close" aria-label="Close camera">✕</button></div>
+    <div class="camera-video-wrap"><video id="camera-video" autoplay muted playsinline aria-label="Live camera preview"></video><div class="camera-crosshair" aria-hidden="true"></div></div>
+    <p id="camera-hint" class="camera-hint">Position the item clearly in the frame.</p>
+    <p class="video-shutter-hint">Tap for photo · Use Record video to capture video</p>
+    <div class="camera-actions"><button class="secondary-btn camera-cancel" data-camera="close">Cancel</button><button id="camera-shutter" type="button" class="camera-shutter" data-camera="capture" aria-label="Tap to take photo, hold to open video recorder"><span></span></button><button type="button" class="secondary-btn camera-video-btn" data-camera="record-video" aria-label="Open phone video recorder">Video</button></div>
+  </dialog>
+  <dialog id="photo-dialog" class="photo-dialog" aria-label="Full photo viewer">
+    <div class="photo-view-head"><span id="photo-caption">Saved photograph</span><button type="button" class="photo-view-close" data-photo="close" aria-label="Close full photograph">✕</button></div>
+    <div id="photo-stage" class="photo-stage" aria-label="Full photograph; pinch to zoom and drag to pan"><img id="photo-full" alt="Full saved condition photograph" draggable="false"></div>
+    <div class="photo-view-controls"><button type="button" data-photo="out" aria-label="Zoom out">−</button><output id="photo-zoom-value">100%</output><button type="button" data-photo="in" aria-label="Zoom in">+</button><button type="button" data-photo="reset">Fit</button></div>
+  </dialog>
+  <input type="file" id="pwa-photo-capture" accept="image/*" capture="environment" hidden aria-label="Take photo with iPhone camera">
+  <input type="file" id="pwa-video-capture" accept="video/*" capture="environment" hidden aria-label="Record video with iPhone camera">
+  <input type="file" id="pwa-video-library" accept="video/*" hidden aria-label="Choose saved video">
+  <dialog id="pwa-video-dialog" class="pwa-video-dialog" aria-label="Saved video player">
+    <div class="pwa-video-head"><span id="pwa-video-caption">Saved inspection video</span><button type="button" id="pwa-video-close" aria-label="Close video">✕</button></div>
+    <video id="pwa-video-player" controls playsinline preload="metadata"></video>
+    <div class="pwa-video-actions"><button type="button" id="pwa-video-share" class="action-btn">Share / Save copy</button><span>To save to Photos, use the iPhone share sheet.</span></div>
+  </dialog>
+  <input type="file" id="gallery-input" accept="image/*" hidden aria-label="Choose photograph from device">
+  <dialog id="confirm-dialog" class="confirm-dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-description">
+    <div class="confirm-panel">
+      <div class="confirm-mark" aria-hidden="true">!</div>
+      <h2 id="confirm-title">Confirm deletion</h2>
+      <p id="confirm-description">This cannot be undone.</p>
+      <div class="confirm-actions">
+        <button type="button" id="confirm-cancel" class="outline-btn">Cancel</button>
+        <button type="button" id="confirm-accept" class="action-btn danger-btn">Delete</button>
+      </div>
+    </div>
+  </dialog>
+</body>
+</html>
