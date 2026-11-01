@@ -95,6 +95,65 @@ test('Every recorded version remains visible, not just latest',()=>{
  assert.match(el('app').innerHTML,/Unsure/);
  assert.match(el('app').innerHTML,/Comparison available/);
 });
+// Regression tests: Previous Records must contain only completed, recorded evidence.
+function withHistory(records, fn){
+ const existing=run('data.records');
+ ctx.historyFixture=records;
+ try{run('data.records=historyFixture');fn()}
+ finally{ctx.historyFixture=existing;run('data.records=historyFixture');delete ctx.historyFixture}
+}
+const makeRecord=(id,propertyId,items,type='move-in')=>({id,propertyId,type,date:'2026-11-01T12:00:00Z',demo:false,items});
+const makeItem=(key,condition='Good')=>({key,condition,photo:null,description:'Test condition'});
+test('Previous Records shows a helpful empty state when no inspections are saved',()=>withHistory([],()=>{
+ run("nav('record-properties')");const html=el('app').innerHTML;
+ assert.match(html,/No saved inspections yet/);
+ assert.doesNotMatch(html,/data-a="choose-record-property"|0 saved inspections/);
+}));
+test('Only properties with a genuinely recorded item appear in Previous Records',()=>withHistory([
+ makeRecord('one','al-sadd',[makeItem('Bedroom::Wardrobe')]),
+ makeRecord('unrecorded','west-bay',[]),
+ makeRecord('condition-empty','tester-villa',[makeItem('Kitchen::Wall','')]),
+],()=>{
+ run("nav('record-properties')");const html=el('app').innerHTML;
+ assert.match(html,/Al Sadd Apartment/);
+ assert.doesNotMatch(html,/West Bay Apartment|Tester villa|0 saved inspections/);
+ assert.equal((html.match(/data-a="choose-record-property"/g)||[]).length,1);
+ assert.match(html,/1 saved inspection/);
+}));
+test('Only recorded rooms and items are shown, retaining expandable room controls',()=>withHistory([
+ makeRecord('one','al-sadd',[makeItem('Bedroom::Wardrobe')]),
+ makeRecord('two','al-sadd',[makeItem('Bedroom::Wardrobe'),makeItem('Bedroom::AC','')],'move-out'),
+ makeRecord('other-property','west-bay',[makeItem('Kitchen::Countertop')]),
+],()=>{
+ run("data.recordsProperty='al-sadd';data.recordsRoom='';nav('record-items')");
+ let html=el('app').innerHTML;
+ assert.match(html,/Bedroom/);
+ assert.match(html,/1 item recorded/);
+ assert.equal((html.match(/data-a="toggle-record-room"/g)||[]).length,1);
+ assert.doesNotMatch(html,/(<strong>Kitchen<\/strong>|<strong>Living Room<\/strong>|0 items recorded)/);
+ run("data.recordsRoom='Bedroom';render()");html=el('app').innerHTML;
+ assert.match(html,/data-a="choose-record-item" data-v="Bedroom::Wardrobe"/);
+ assert.doesNotMatch(html,/data-v="Bedroom::AC"|data-v="Bedroom::Wall"|No record yet/);
+ assert.equal((html.match(/data-a="choose-record-item"/g)||[]).length,1);
+ assert.match(html,/2 records/);
+}));
+test('Recorded custom items and custom rooms remain accessible',()=>withHistory([
+ makeRecord('custom','al-sadd',[makeItem('Balcony::Railing'),makeItem('Bedroom::Custom shelf')]),
+],()=>{
+ run("data.recordsProperty='al-sadd';data.recordsRoom='Balcony';nav('record-items')");let html=el('app').innerHTML;
+ assert.match(html,/Balcony/);
+ assert.match(html,/Railing/);
+ assert.doesNotMatch(html,/0 item/);
+ run("data.recordsRoom='Bedroom';render()");html=el('app').innerHTML;
+ assert.match(html,/Custom shelf/);
+ assert.doesNotMatch(html,/Wardrobe|Bedroom::AC/);
+}));
+test('Direct navigation to an unrecorded property or item still gives an empty state',()=>withHistory([
+ makeRecord('one','al-sadd',[makeItem('Bedroom::Wardrobe')]),
+],()=>{
+ run("data.recordsProperty='west-bay';nav('record-items')");assert.match(el('app').innerHTML,/No recorded items available/);
+ run("data.recordsProperty='al-sadd';data.recordsItem='Bedroom::AC';nav('record-detail')");assert.match(el('app').innerHTML,/No record available/);
+}));
 test('Legacy single draft migrates into collection on reload',()=>{
  const existing={properties:[{id:'al-sadd',name:'Al Sadd Apartment'}],draft:{id:'legacy-draft',propertyId:'al-sadd',type:'move-in',startedAt:'2026-10-01',selected:['Bedroom::Wardrobe'],custom:[],details:{'Bedroom::Wardrobe':{condition:'Good',description:'Still intact'}}},records:[]};
  const migrationStorage=new Map([['moveproof-qatar-prototype-v1',JSON.stringify(existing)]]);

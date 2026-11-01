@@ -11,6 +11,16 @@ This is an **Android Studio project**, not yet a built APK. It embeds the five-s
 5. Connect your Android phone via USB, enable **Developer options → USB debugging**, then install from Android Studio's Run button. Or copy the APK to your phone and allow installation from that source.
 6. Alternatively, open this folder in Android Studio (choose the folder containing `settings.gradle`) and use **Build → Build APK(s)**. If Android Studio requests a Gradle installation, use the provided build script.
 
+## Version 0.5 — show only recorded history (November 2026)
+
+- **Previous records → Properties:** Only apartments or villas with at least one completed inspection containing a recorded condition appear. A newly added property or a property with only drafts stays off this page. When no saved inspections exist, show **No saved inspections yet** rather than empty property cards or zero-count placeholders.
+- **Previous records → Rooms & items:** Keep the existing expandable/dropdown room cards but list **only rooms with recorded items**, and **only the items actually captured in completed inspections**. Hide unused rooms, predefined items with no history, and empty/invalid legacy selections. Custom recorded rooms and items remain accessible. Item record counts still reflect all saved inspections containing that item.
+- **Record details:** Move-in / move-out history, comparisons, written condition, and full-size photo/zoom still work. Direct navigation to an item without saved conditions shows **No record available**.
+- Stored inspections, properties, drafts, and photos are not deleted by this filter. The application's ID and local storage key are unchanged so the app can be installed over v0.4 on the same device/signing key.
+- Bumped Android `versionCode` to 5 and `versionName` to `0.5.0`. Added focused regression tests for hidden empty properties, rooms, unrecorded items, custom records, and empty-state navigation.
+
+**Install on paired Samsung:** Run `git pull origin main` in Android Studio, then `cmd /c REBUILD_AND_UPDATE_PHONE.bat` in the Terminal. Select **Y** to install over the existing app. Do not uninstall if you need to preserve locally saved evidence. Native compilation and on-device verification remain necessary.
+
 ## Version 0.4 — dashboard, drafts and history navigation (November 2026)
 
 - Simplified dashboard: removed the 'PROPERTY CONDITION LOG' header subtitle and the redundant 'Protect the details that matter' headline. Made **Your inspection workspace** the primary heading, expanded its explanation, and added **Learn more** with a short offline usage guide.
@@ -61,8 +71,8 @@ The helper cannot wirelessly install until the device is correctly paired, autho
 - Acknowledge missing photo. Confirm that Finish inspection becomes available only after all selected items have conditions and no unresolved warnings remain.
 - Save a draft; close/relaunch app; verify the draft and typed condition description are still available.
 - Finish an inspection, open Previous Records, tap its photo, confirm the whole image is shown, pinch-zoom/pan it, then close it.
-- Before making any inspections, open Previous Records and verify it shows **No record available**, not a 2025 date or photo placeholder. On an upgraded install, confirm old fictional 2025 entries are gone but your actual inspections remain.
-- Finish a move-in inspection, then a move-out inspection for the same property/item; verify Previous Records comparison; switch to an item with no history and check empty state.
+- Before making any inspections, open Previous Records and verify it shows **No saved inspections yet**, not zero-count properties or fictional 2025 records. On an upgraded install, confirm old fictional 2025 entries are gone but your actual inspections remain.
+- Finish a move-in inspection for one item and verify that only its property, room and item appear in Previous Records. Make an empty property and verify it is hidden. Then complete a move-out inspection for the same property/item and verify comparison; verify unrecorded items remain hidden from the room list.
 
 ## Design and privacy notes
 

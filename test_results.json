@@ -109,6 +109,26 @@
       "status": "PASS"
     },
     {
+      "test": "Previous Records shows a helpful empty state when no inspections are saved",
+      "status": "PASS"
+    },
+    {
+      "test": "Only properties with a genuinely recorded item appear in Previous Records",
+      "status": "PASS"
+    },
+    {
+      "test": "Only recorded rooms and items are shown, retaining expandable room controls",
+      "status": "PASS"
+    },
+    {
+      "test": "Recorded custom items and custom rooms remain accessible",
+      "status": "PASS"
+    },
+    {
+      "test": "Direct navigation to an unrecorded property or item still gives an empty state",
+      "status": "PASS"
+    },
+    {
       "test": "Legacy single draft migrates into collection on reload",
       "status": "PASS"
     },
@@ -129,7 +149,7 @@
       "status": "PASS"
     }
   ],
-  "passed": 32,
-  "total": 32,
+  "passed": 37,
+  "total": 37,
   "notes": "Source-level and simulated-camera tests, NOT a compiled APK or real Android device test."
 }
