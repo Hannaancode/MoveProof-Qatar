@@ -1,4 +1,4 @@
-# MoveProof Qatar — Android test build (five-screen prototype)
+# MoveProof Qatar — Android inspection prototype
 
 This is an **Android Studio project**, not yet a built APK. It embeds the five-screen HTML/CSS/JS interface and supports native Android camera and gallery permission handling. It does not need a server or a Play Console account for testing.
 
@@ -11,7 +11,21 @@ This is an **Android Studio project**, not yet a built APK. It embeds the five-s
 5. Connect your Android phone via USB, enable **Developer options → USB debugging**, then install from Android Studio's Run button. Or copy the APK to your phone and allow installation from that source.
 6. Alternatively, open this folder in Android Studio (choose the folder containing `settings.gradle`) and use **Build → Build APK(s)**. If Android Studio requests a Gradle installation, use the provided build script.
 
-## Version 0.3 — changes based on phone testing
+## Version 0.4 — dashboard, drafts and history navigation (November 2026)
+
+- Simplified dashboard: removed the 'PROPERTY CONDITION LOG' header subtitle and the redundant 'Protect the details that matter' headline. Made **Your inspection workspace** the primary heading, expanded its explanation, and added **Learn more** with a short offline usage guide.
+- Replaced single-draft persistence with a **collection of drafts**. Starting a new inspection preserves prior drafts. **Saved drafts** lists every unfinished inspection with separate **Continue** and **Delete** actions. Older versions' single `draft` field is migrated into the `drafts` collection without discarding the notes/photos inside it.
+- **Previous records** is now a clear three-step path: **Property → Room/Item → Saved history**. Property names appear first, rooms expand to reveal items, and each item opens its records. Blank items say **No record available**. All genuine historical move-in and move-out records are listed (not just the most recent of each type).
+- Preserved fullscreen saved-photo viewing, zoom controls, written condition descriptions, photo acknowledgement, custom items, property address details and the exclusion of fictional 2025 records.
+- Kept the Android application ID `qa.moveproof.inspection` and WebView storage key `moveproof-qatar-prototype-v1` for in-place updates; bumped `versionCode` to 4 / `versionName` to `0.4.0`.
+
+**Caution:** Prototype evidence is still stored only in WebView localStorage. More drafts and photos can hit its per-origin storage limit. Do not uninstall or clear app data if you need to keep records; a backed-up/exportable evidence store is a future improvement.
+
+To deploy source changes from GitHub in Android Studio: `git pull origin main`, then run `REBUILD_AND_UPDATE_PHONE.bat` in the project root with your Android phone paired via Wi-Fi debugging. The helper builds and offers to install over the existing app. The APK must be signed with the same debug key as the installed version, otherwise Android will reject the in-place update; do not uninstall just to make it work if preserving data matters.
+
+Source-level tests: run `node run_source_tests.js` from the project root (Node.js required). Native compilation and phone-camera behavior still need verification on Windows/Android hardware.
+
+## Version 0.3 — earlier phone-testing fixes
 
 - Fixed saved-photo thumbnail cropping (`object-fit: contain` instead of `cover`). Tap a saved photo to see the complete image in a fullscreen viewer with **pinch-to-zoom, pan, +/- and Fit**. Photo preview in the condition editor also opens the viewer.
 - Added a **written condition description** next to Good / Damaged / Unsure. The description persists in the inspection and is visible alongside Notes in saved records, including for items without photographs.
@@ -61,6 +75,6 @@ The helper cannot wirelessly install until the device is correctly paired, autho
 - API 36 target for Google Play's 2026 requirement; minimum Android 8.0 (API 26).
 - Debug builds are signed with Android debug keys and **cannot be uploaded to Google Play as release builds**. Real Play submission requires release signing plus Play Console testing/compliance.
 
-## Verification performed here
+## Verification performed
 
-Version 0.3 was updated and source-level tests were run in an environment without Android SDK/Gradle, so **version 0.3 native compilation and physical-camera testing have not been performed**. The user previously reported that the original version successfully built on Windows with Java 17 and Gradle 8.13. The web app's behavior can be exercised in a Chromium-based browser, and static source/configuration checks are included in `tests`.
+Version 0.4 passed 32 source-level tests and 8 browser interaction checks (dashboard, guide, property creation, inspection completion, three-step history, empty state, multiple drafts, persistence, JavaScript errors). The Android SDK and Gradle are not available in this build environment, so **the version 0.4 native APK has not been compiled or tested on physical Android hardware**. Build and verify on the Windows PC with Android Studio and the paired phone.

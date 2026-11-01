@@ -25,3 +25,42 @@
 /* Version 0.3: make absence of photo explicit, never mimic a photo placeholder. */
 .no-photo-label{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;color:#69737e;font-size:12px;font-weight:750;text-align:center;padding:10px}
 .no-photo-label .icon{color:#9aa1aa}.no-photo-label small{color:#87909b;font-size:10px;font-weight:500}
+
+
+/* Version 0.4: simplified entry screen, saved drafts and three-step record navigation. */
+.topbar{height:76px}
+.brandname{font-size:19px;letter-spacing:-.65px;line-height:1.1}
+.dashboard-intro{padding:0 0 3px}
+.workspace-title{font-size:20px;line-height:1.22;letter-spacing:-.5px;font-weight:820;margin:0 0 11px;color:var(--ink)}
+.dashboard-intro .subhead{font-size:13px;line-height:1.65;max-width:46ch}
+.learn-more-link{border:0;background:transparent;color:var(--wine);display:inline-flex;gap:4px;align-items:center;font-weight:800;font-size:12px;padding:11px 0 0;text-decoration:underline;text-underline-offset:3px}
+.flow-title{font-size:23px;line-height:1.2;letter-spacing:-.7px;margin:9px 0 9px;font-weight:820}
+.guide-stack{display:grid;gap:12px;margin:24px 0 18px}
+.guide-step{border:1px solid var(--line);border-radius:18px;display:flex;gap:13px;align-items:flex-start;padding:18px;background:#fff}
+.guide-number{background:var(--wine-soft);color:var(--wine);font-weight:800;width:31px;height:31px;display:grid;place-items:center;border-radius:10px;flex:none}
+.guide-step h3{font-size:15px;margin:2px 0 7px}.guide-step p{font-size:12px;color:var(--secondary);line-height:1.6;margin:0}
+.draft-card{margin-top:15px;border:1px solid var(--line);border-radius:18px;padding:16px;background:#fff}
+.draft-card-main{display:flex;align-items:flex-start;gap:12px}
+.draft-card-main h3{margin:0 0 5px;font-size:15px}.draft-card-main p{font-size:12px;margin:0 0 5px;color:var(--secondary)}.draft-card-main small{font-size:11px;color:var(--muted)}
+.item-badge{display:inline-grid;place-items:center;width:43px;height:43px;flex:none;background:var(--wine-soft);border-radius:14px;color:var(--wine)}
+.draft-actions{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:9px;margin-top:16px}
+.draft-actions .action-btn,.draft-actions .outline-btn{min-height:43px;padding:10px 14px}
+.delete-draft{color:#8c2847;border-color:#e4cdd7}
+.history-property-list{display:grid;gap:12px;margin-top:21px}
+.history-property{border:1px solid var(--line);border-radius:17px;background:#fff;min-height:90px;padding:17px 14px;display:flex;gap:12px;align-items:center;text-align:left;color:var(--ink);width:100%}
+.history-property:active,.history-item:active{background:var(--wine-soft)}
+.history-property .grow{min-width:0;display:grid;gap:4px}
+.history-property strong{font-size:15px}.history-property small{font-size:11px;color:var(--secondary);line-height:1.45}
+.history-count{font-size:11px;font-weight:700;color:var(--wine)}
+.history-property>.icon:last-child{color:var(--secondary)}
+.history-context{margin:18px 0 20px;display:flex;gap:10px;align-items:center;background:var(--canvas);border:1px solid var(--line);border-radius:13px;padding:13px;color:var(--wine)}
+.history-context div{display:grid;gap:3px}.history-context strong{font-size:12px;color:var(--ink)}.history-context small{font-size:11px;color:var(--secondary)}
+.history-room{margin:11px 0}
+.history-item-list{border-top:1px solid var(--line);padding:4px 15px 12px}
+.history-item{display:flex;align-items:center;gap:12px;width:100%;background:transparent;border:0;border-bottom:1px solid #eeedef;padding:15px 3px;text-align:left;color:var(--ink)}
+.history-item:last-child{border-bottom:0}
+.history-item>span:first-child{flex:1;font-size:13px;font-weight:670}
+.history-item small{font-size:11px;color:var(--secondary)}
+.history-item>.icon:last-child{color:var(--muted)}
+.history-summary{display:flex;align-items:center;gap:8px;border-radius:12px;background:var(--wine-soft);color:var(--wine);font-size:12px;font-weight:750;padding:12px;margin:18px 0 13px}
+@media(max-width:520px){.brandname{font-size:19px}.workspace-title{font-size:21px}.dashboard-intro .subhead{font-size:13px}}

@@ -9,7 +9,7 @@
       "status": "PASS"
     },
     {
-      "test": "Five states are wired",
+      "test": "All eight views are wired",
       "status": "PASS"
     },
     {
@@ -26,6 +26,30 @@
     },
     {
       "test": "New inspection creates draft",
+      "status": "PASS"
+    },
+    {
+      "test": "Starting another inspection preserves previous draft",
+      "status": "PASS"
+    },
+    {
+      "test": "Drafts page lists two resumable and individually deletable drafts",
+      "status": "PASS"
+    },
+    {
+      "test": "Resuming first draft does not remove second",
+      "status": "PASS"
+    },
+    {
+      "test": "Deleting one draft preserves other",
+      "status": "PASS"
+    },
+    {
+      "test": "Dashboard simplifies heading and provides Learn More",
+      "status": "PASS"
+    },
+    {
+      "test": "Learn More explains operation and local storage",
       "status": "PASS"
     },
     {
@@ -77,6 +101,18 @@
       "status": "PASS"
     },
     {
+      "test": "Property-first history and item navigation are rendered separately",
+      "status": "PASS"
+    },
+    {
+      "test": "Every recorded version remains visible, not just latest",
+      "status": "PASS"
+    },
+    {
+      "test": "Legacy single draft migrates into collection on reload",
+      "status": "PASS"
+    },
+    {
       "test": "Legacy 2025 demo records are removed on upgrade without deleting real inspections",
       "status": "PASS"
     },
@@ -93,7 +129,7 @@
       "status": "PASS"
     }
   ],
-  "passed": 23,
-  "total": 23,
+  "passed": 32,
+  "total": 32,
   "notes": "Source-level and simulated-camera tests, NOT a compiled APK or real Android device test."
 }
