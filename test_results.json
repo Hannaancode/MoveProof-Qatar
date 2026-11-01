@@ -223,9 +223,13 @@
     {
       "test": "Simulated JS camera open and photo capture",
       "status": "PASS"
+    },
+    {
+      "test": "A damaged item with video does not show missing-photo warnings during review",
+      "status": "PASS"
     }
   ],
-  "passed": 56,
-  "total": 56,
+  "passed": 57,
+  "total": 57,
   "notes": "Source-level and simulated-camera tests, NOT a compiled APK or real Android device test."
 }
