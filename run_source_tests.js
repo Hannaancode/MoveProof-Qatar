@@ -268,6 +268,12 @@ test('Damaged item with saved video counts as visual evidence',()=>{
  run("data.selectedKey='Bedroom::Wardrobe';detail().condition='Damaged';detail().photo=null;detail().videoUri='content://media/external/video/media/123';detail().ack=false");
  assert.equal(run('checkDraft().canFinish'),true);
 });
+test('A damaged item with video does not show missing-photo warnings during review',()=>{
+ run("data.drafts=[];data.draft=null;data.propertyId='al-sadd';data.type='move-in';startNew();data.selectedKey='Bedroom::Wardrobe';detail().condition='Damaged';detail().photo=null;detail().videoUri='content://media/external/video/media/120';detail().ack=false;data.openedRoom='Bedroom';nav('review')");
+ assert.equal(run('checkDraft().canFinish'),true);
+ assert.match(el('app').innerHTML,/Review complete/);
+ assert.doesNotMatch(el('app').innerHTML,/Missing visual evidence.*no photo or video/);
+});
 test('Record Video sends the draft and item identifiers to native Android',()=>{
  run("data.drafts=[];data.draft=null;data.propertyId='al-sadd';data.type='move-in';startNew()");
  const calls=[];ctx.window.MoveProofVideo={recordVideo:(draftId,key,autoStart)=>calls.push({draftId,key,autoStart}),openVideo:()=>{}};
