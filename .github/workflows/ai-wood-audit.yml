@@ -1,0 +1,30 @@
+name: Audit original wood defect dataset
+
+on:
+  push:
+    branches:
+      - feature/ai-item-inspection
+    paths:
+      - '.github/workflows/ai-wood-audit.yml'
+      - 'ai/research/download_and_audit.py'
+      - 'ai/research/README.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  original-dataset:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run independent archive and label audit
+        run: python ai/research/download_and_audit.py --download --root ai_data/wood --report-dir ai_reports
+      - name: Preserve audit report, not raw dataset
+        uses: actions/upload-artifact@v4
+        with:
+          name: MoveProof-wood-original-audit
+          path: ai_reports/wood_original_inventory.json
+          if-no-files-found: error
+          retention-days: 30
