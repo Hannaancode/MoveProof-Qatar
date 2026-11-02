@@ -1,0 +1,45 @@
+name: Train preliminary wood defect detector (research only)
+
+on:
+  push:
+    branches:
+      - feature/ai-item-inspection
+    paths:
+      - '.github/workflows/ai-wood-train.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  train-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install CPU PyTorch and research YOLO dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install 'ultralytics>=8.3.0,<8.4.0'
+      - name: Download and verify source dataset
+        run: python ai/research/download_and_audit.py --download --root ai_data/wood --report-dir ai_reports
+      - name: Train and evaluate a preliminary detector on original images only
+        env:
+          YOLO_CONFIG_DIR: ${{ runner.temp }}/moveproof-yolo-config
+        run: python ai/research/train_wood_detector.py --originals ai_data/wood/original --processed ai_data/wood_processed --reports ai_reports --epochs 5 --imgsz 320 --device cpu
+      - name: Preserve model and fully reproducible split metrics
+        uses: actions/upload-artifact@v4
+        with:
+          name: MoveProof-wood-defect-research-model
+          path: |
+            ai_reports/wood_original_inventory.json
+            ai_reports/research_training_results.json
+            ai_reports/research_wood_yolov8n_best.pt
+            ai_reports/split_summary.json
+            ai_reports/split_manifest.csv
+          if-no-files-found: error
+          retention-days: 30
