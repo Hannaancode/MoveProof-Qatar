@@ -6,6 +6,7 @@ on:
       - feature/ai-item-inspection
     paths:
       - '.github/workflows/ai-wood-train.yml'
+      - 'ai/research/train_wood_detector.py'
   workflow_dispatch:
 
 permissions:
