@@ -6,3 +6,11 @@ app/build/
 local.properties
 *.keystore
 *.jks
+
+# AI research: never commit external datasets, media, models or reports
+ai_data/
+ai_reports/
+runs/
+*.pt
+*.onnx
+*.ckpt
