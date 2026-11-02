@@ -112,14 +112,18 @@ def train(dataset,report_dir,epochs,device,imgsz):
     from ultralytics import YOLO
     if not (dataset/'dataset.yaml').is_file():raise FileNotFoundError('dataset.yaml')
     print(f'PyTorch {torch.__version__}, Ultralytics {ultralytics.__version__}, device={device}',flush=True)
-    project=report_dir/'training'
+    project=(report_dir/'training').resolve()
     start=time.monotonic()
     model=YOLO('yolov8n.pt')
     train_result=model.train(data=str((dataset/'dataset.yaml').resolve()),epochs=epochs,imgsz=imgsz,batch=16,
          workers=2,device=device,seed=SPLIT_SEED,deterministic=True,project=str(project),name='wood_defects_baseline',
          exist_ok=True,plots=False,verbose=False,save=True,patience=epochs)
-    best=project/'wood_defects_baseline'/'weights'/'best.pt'
-    if not best.exists():raise FileNotFoundError('Training completed without best.pt')
+    # Use Ultralytics' actual output directory rather than guessing its location.
+    # Certain hosted environments override the runs_dir setting.
+    trainer=getattr(model,'trainer',None)
+    savedir=Path(trainer.save_dir) if trainer is not None else (project/'wood_defects_baseline')
+    best=savedir/'weights'/'best.pt'
+    if not best.exists():raise FileNotFoundError(f'Training completed without best.pt at {best}')
     validator=YOLO(str(best))
     test_metrics=validator.val(data=str((dataset/'dataset.yaml').resolve()),split='test',imgsz=imgsz,
                                batch=16,workers=2,device=device,plots=False,verbose=False)
