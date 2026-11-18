@@ -52,19 +52,69 @@ const propAddress=x=>{const p=propertyById(x);if(!p)return '';return [p.zone&&`Z
 const stored=(()=>{try{return JSON.parse(localStorage.getItem(STORE)||'null');}catch{return null}})();
 const storedDrafts=(Array.isArray(stored?.drafts)?stored.drafts:(stored?.draft?[stored.draft]:[])).filter(d=>d&&typeof d==='object'&&d.id&&Array.isArray(d.selected)&&d.details);
 const activeDraft=storedDrafts.find(d=>d.id===stored?.activeDraftId)||(stored?.draft?storedDrafts[0]:null);
-const data={properties:Array.isArray(stored?.properties)?[...DEFAULT_PROPERTIES,...stored.properties.filter(p=>p&&p.id&&!DEFAULT_PROPERTIES.some(d=>d.id===p.id))]:structuredClone(DEFAULT_PROPERTIES),showPropertyForm:false,records:Array.isArray(stored?.records)?stored.records.filter(isRealRecord):[],drafts:storedDrafts,draft:activeDraft,propertyId:stored?.propertyId||'al-sadd',type:stored?.type||'move-in',page:'dashboard',openedRoom:'Bedroom',customFormRoom:null,selectedKey:null,returnReview:false,photoError:'',skipPhoto:false,recordsProperty:stored?.propertyId||'al-sadd',recordsItem:'Bedroom::Wardrobe',recordsRoom:'',lastFinishedId:null,toastTimer:null,cameraStream:null};
+const data={properties:Array.isArray(stored?.properties)&&stored.properties.some(p=>p&&p.id)?stored.properties.filter(p=>p&&p.id):structuredClone(DEFAULT_PROPERTIES),showPropertyForm:false,editingPropertyId:null,deletePropertyMode:false,records:Array.isArray(stored?.records)?stored.records.filter(isRealRecord):[],drafts:storedDrafts,draft:activeDraft,propertyId:stored?.propertyId||'al-sadd',type:stored?.type||'move-in',page:'dashboard',openedRoom:'Bedroom',customFormRoom:null,selectedKey:null,returnReview:false,photoError:'',skipPhoto:false,recordsProperty:stored?.propertyId||'al-sadd',recordsItem:'Bedroom::Wardrobe',recordsRoom:'',lastFinishedId:null,toastTimer:null,cameraStream:null};
 const app=document.getElementById('app');const dlg=document.getElementById('camera-dialog');const video=document.getElementById('camera-video');const gallery=document.getElementById('gallery-input');
 function persist(){try{if(data.draft)data.draft.updatedAt=new Date().toISOString();localStorage.setItem(STORE,JSON.stringify({properties:data.properties,records:data.records,drafts:data.drafts,activeDraftId:data.draft?.id||null,propertyId:data.propertyId,type:data.type}));return true}catch(err){toast('Storage limit reached. Photos may not survive a refresh; try fewer or smaller pictures.');return false}}
 function toast(message){const t=document.getElementById('toast');t.textContent=message;t.classList.add('show');clearTimeout(data.toastTimer);data.toastTimer=setTimeout(()=>t.classList.remove('show'),4000)}
 function nav(page){if(page==='dashboard'&&data.draft)persist();stopCamera();data.page=page;data.photoError='';render();window.scrollTo(0,0)}
-function header(){return `<header class="topbar"><div class="brand"><div class="brandmark">${ico('home',22)}</div><div class="brandname">MoveProof <span style="font-weight:500">Qatar</span></div></div><span class="chip">LOCAL DEMO</span></header>`}
+function header(){return `<header class="topbar"><div class="brand"><div class="brandmark">${ico('home',22)}</div><div class="brandname">MoveProof <span style="font-weight:500">Qatar</span></div></div><span class="chip">OFFLINE</span></header>`}
 function navhead(title,sub,back='dashboard'){return `<div class="nav-header"><button type="button" class="back-icon" data-a="nav" data-v="${back}" aria-label="Back to previous screen">${ico('arrow',20)}</button><div class="nav-copy"><h1 class="nav-title">${escapeHtml(title)}</h1>${sub?`<div class="nav-sub">${escapeHtml(sub)}</div>`:''}</div><button type="button" class="home-icon" data-a="nav" data-v="dashboard" aria-label="Go directly to main menu" title="Main menu">${ico('home',20)}</button></div>`}
 function stepper(active){const names=['Type','Rooms & Items','Inspect','Review'];return `<div class="stepper" aria-label="Inspection progress">${names.map((n,i)=>`<div class="step ${active===i+1?'active':active>i+1?'done':''}" ${active===i+1?'aria-current="step"':''}><div class="num">${active>i+1?ico('check',15):i+1}</div><span>${n}</span></div>`).join('')}</div>`}
 function footer(content){return `<div class="sticky-foot">${content}</div>`}
 function lastRecord(){return data.records.filter(r=>r.propertyId===data.propertyId).sort((a,b)=>new Date(b.date)-new Date(a.date))[0]}
+function propertyForm(){
+ const existing=data.editingPropertyId?propertyById(data.editingPropertyId):null;
+ const edit=!!existing;
+ const value=(v)=>escapeHtml(v||'');
+ return `<div class="property-modal-backdrop"><div class="property-modal" role="dialog" aria-modal="true" aria-labelledby="property-modal-title"><form id="property-form" novalidate><h2 id="property-modal-title">${edit?'Edit Property':'Add Property'}</h2>
+ <label class="field-label" for="property-type">Property Type</label><select class="select" id="property-type" required><option value="Apartment" ${existing?.type==='Apartment'?'selected':''}>Apartment</option><option value="Villa" ${existing?.type==='Villa'?'selected':''}>Villa</option></select>
+ <label class="field-label" for="property-name">Property Name</label><input class="input" id="property-name" maxlength="65" value="${value(existing?.name)}" placeholder="Property name" autocomplete="off">
+ <label class="field-label" for="property-building">House Number</label><input class="input" id="property-building" type="text" inputmode="text" maxlength="12" value="${value(existing?.building)}" placeholder="e.g. 12A" required aria-describedby="property-building-error"><small id="property-building-error" class="property-input-error" role="alert"></small>
+ <label class="field-label" for="property-street">Street Number</label><input class="input" id="property-street" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="12" value="${value(existing?.street)}" placeholder="Numbers only" required aria-describedby="property-street-error"><small id="property-street-error" class="property-input-error" role="alert"></small>
+ <label class="field-label" for="property-zone">Zone Number</label><input class="input" id="property-zone" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="10" value="${value(existing?.zone)}" placeholder="Numbers only" required aria-describedby="property-zone-error"><small id="property-zone-error" class="property-input-error" role="alert"></small>
+ <div class="property-form-actions"><button class="action-btn" type="submit">${edit?'Save Changes':'Add Property'}</button><button class="outline-btn" type="button" data-a="close-property-form">Cancel</button></div>
+ <p class="property-form-footnote">Property details are saved locally on this device.</p></form></div></div>`;
+}
+function propertyManager(){
+ const selected=propertyById(data.propertyId);
+ const address=[['House No.',selected?.building],['Street',selected?.street],['Zone',selected?.zone]];
+ return `<section class="property-box property-manager" aria-label="Manage properties"><label class="field-label" for="main-property">Selected property</label>
+ <select id="main-property" class="select property-primary-select" data-field="property">${data.properties.map(p=>`<option value="${escapeHtml(p.id)}" ${p.id===data.propertyId?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}</select>
+ <div class="property-address-bar">${address.map(([label,val])=>`<div><strong>${label}</strong><span>${escapeHtml(val||'Not entered')}</span></div>`).join('')}</div>
+ <section class="property-list-panel"><h3>APARTMENTS &amp; VILLAS</h3><div class="property-list" role="radiogroup" aria-label="Choose property">
+ ${data.properties.map(p=>`<div class="property-row ${p.id===data.propertyId?'is-selected':''}"><button type="button" class="property-choose" data-a="select-property" data-v="${escapeHtml(p.id)}" role="radio" aria-checked="${p.id===data.propertyId}" aria-label="Select ${escapeHtml(p.name)}"><span class="property-radio" aria-hidden="true"></span><span class="property-identity"><strong>${escapeHtml(p.name)}</strong><small>${escapeHtml(p.type)}</small></span></button>${data.deletePropertyMode?`<button type="button" class="property-small-action property-delete" data-a="delete-property" data-v="${escapeHtml(p.id)}" aria-label="Delete ${escapeHtml(p.name)}">${ico('trash',19)}</button>`:`<button type="button" class="property-small-action property-edit" data-a="edit-property" data-v="${escapeHtml(p.id)}" aria-label="Edit ${escapeHtml(p.name)}">${ico('edit',18)}</button>`}</div>`).join('')}
+ </div><div class="property-manager-actions">${data.deletePropertyMode?`<button type="button" class="outline-btn" data-a="toggle-delete-property-mode">Exit Delete Mode</button>`:`<button type="button" class="outline-btn" data-a="add-property">${ico('plus',16)} Add Property</button><button type="button" class="action-btn" data-a="toggle-delete-property-mode">Delete Property</button>`}</div>${data.deletePropertyMode?`<p class="property-delete-hint">Choose the delete icon beside a property, or exit deletion mode.</p>`:''}</section></section>`;
+}
+function propertyFieldError(field,message){
+ const node=document.getElementById('property-'+field+'-error');
+ const input=document.getElementById('property-'+field);
+ if(node)node.textContent=message;
+ if(input)input.setAttribute('aria-invalid',message?'true':'false');
+}
+function validatePropertyInput(field,value){
+ if(field==='building')return /^\d+[A-Za-z]?$/.test(value)?'':'Enter a house number, optionally ending with one letter (e.g. 12A).';
+ if(field==='street'||field==='zone')return /^\d+$/.test(value)?'':'Numbers only.';
+ return '';
+}
+function openPropertyForm(propertyId=null){
+ data.editingPropertyId=propertyId;
+ data.showPropertyForm=true;
+ data.deletePropertyMode=false;
+ render();document.getElementById('property-type')?.focus();
+}
+function closePropertyForm(){data.showPropertyForm=false;data.editingPropertyId=null;render()}
+function requestPropertyDeletion(propertyId){
+ const p=propertyById(propertyId);
+ if(!p)return;
+ if(data.properties.length<=1){toast('Keep at least one property. Add another before deleting this one.');return}
+ if(data.records.some(r=>r.propertyId===propertyId)||data.drafts.some(d=>d.propertyId===propertyId)){
+  toast('This property has inspections or drafts. Delete those records first to protect your evidence.');return;
+ }
+ requestDeletion({kind:'property',id:propertyId},'Delete Property?',`Delete ${p.name} from your saved properties? This cannot be undone.`);
+}
 function dashboard(){const last=lastRecord();return `${header()}<div class="page dashboard"><div class="dashboard-intro"><h1 class="workspace-title">Your inspection workspace</h1><p class="subhead">Keep a clear record of your rental home's condition at move-in and move-out. Document rooms and furniture with photos, written notes and dates, then review the evidence whenever you need it.</p><button type="button" class="learn-more-link" data-a="learn-more">Learn more ${ico('chevron',15)}</button></div>
-<div class="property-box"><label class="field-label" for="main-property">Selected property</label><div class="field-icon">${ico('home')}</div><select id="main-property" class="select" data-field="property">${data.properties.map(p=>`<option value="${escapeHtml(p.id)}" ${p.id===data.propertyId?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}</select><p class="property-address">${escapeHtml(propAddress(data.propertyId)||'No street address saved for this sample property')}</p><button type="button" class="outline-btn button-inline add-property-btn" data-a="toggle-property">${ico('plus',16)} ${data.showPropertyForm?'Close add property':'Add apartment / villa'}</button></div>
-${data.showPropertyForm?`<section class="section-card add-property-form"><h3>Add apartment or villa</h3><p class="small-meta">Address information stays on this device. Zone, street and building / villa number are required.</p><form id="property-form"><div class="form-grid"><div><label class="field-label" for="property-type">Property type</label><select class="select" id="property-type"><option>Apartment</option><option>Villa</option></select></div><div><label class="field-label" for="property-name">Property name (optional)</label><input class="input" id="property-name" maxlength="65" placeholder="e.g. My Al Wakrah apartment"></div><div><label class="field-label" for="property-building">Building / Villa number *</label><input class="input" id="property-building" inputmode="text" maxlength="20" required placeholder="e.g. 28"></div><div><label class="field-label" for="property-street">Street number *</label><input class="input" id="property-street" inputmode="numeric" maxlength="20" required placeholder="e.g. 105"></div><div><label class="field-label" for="property-zone">Zone number *</label><input class="input" id="property-zone" inputmode="numeric" maxlength="10" required placeholder="e.g. 56"></div><div><label class="field-label" for="property-unit">Apartment / Unit number (optional)</label><input class="input" id="property-unit" maxlength="20" placeholder="e.g. 203"></div><div class="row-actions"><button class="outline-btn" type="button" data-a="toggle-property">Cancel</button><button class="action-btn" type="submit">${ico('check',16)} Save property</button></div></div></form></section>`:''}
+${propertyManager()}
+${data.showPropertyForm?propertyForm():''}
 <section class="hero-card" aria-label="Start new inspection"><div class="hero-top"><div class="hero-icon">${ico('clipboard',26)}</div><div><h2>New inspection</h2><p>Choose an inspection type to begin</p></div></div>
 <div class="choice-grid"><button type="button" data-a="set-type" data-v="move-in" class="choice ${data.type==='move-in'?'selected':''}" aria-pressed="${data.type==='move-in'}"><div class="choice-header">${ico('home',19)}<span class="radio-dot"></span></div><strong style="font-size:13px">Move-in</strong><span class="mini-text">Record existing conditions</span></button><button type="button" data-a="set-type" data-v="move-out" class="choice ${data.type==='move-out'?'selected':''}" aria-pressed="${data.type==='move-out'}"><div class="choice-header">${ico('file',19)}<span class="radio-dot"></span></div><strong style="font-size:13px">Move-out</strong><span class="mini-text">Compare with move-in</span></button></div>
 <button type="button" class="action-btn light full" data-a="new">Start ${data.type==='move-in'?'move-in':'move-out'} inspection ${ico('chevron',17)}</button></section>
@@ -72,7 +122,7 @@ ${data.showPropertyForm?`<section class="section-card add-property-form"><h3>Add
 <button class="quick-link" type="button" data-a="drafts"><span class="link-icon">${ico('file',21)}</span><span class="grow"><strong>Saved drafts</strong><small>${data.drafts.length} unfinished inspection${data.drafts.length===1?'':'s'} · Resume or delete</small></span><span class="chevron">${ico('chevron',17)}</span></button>
 <button class="quick-link" type="button" data-a="records"><span class="link-icon">${ico('folder',21)}</span><span class="grow"><strong>Previous records</strong><small>View history and compare conditions</small></span><span class="chevron">${ico('chevron',17)}</span></button>
 <button class="quick-link" type="button" data-a="last"><span class="link-icon">${ico('clock',21)}</span><span class="grow"><strong>Last inspection</strong><small>${last?`${last.type==='move-in'?'Move-in':'Move-out'} · ${fmtDate(last.date)}${last.demo?' · Sample':''}`:'No inspections saved'}</small></span><span class="chevron">${ico('chevron',17)}</span></button>
-<p class="footer-note">${ico('lock',13)} Offline Android prototype · inspection records stored on this device</p></div>`}
+<p class="footer-note">${ico('lock',13)} Inspection records stored locally on this device</p></div>`}
 function startNew(){
   const status=data.type==='move-out'?moveOutState(data.propertyId):null;
   const selected=status?.missing.length?[...status.missing]:[itemKey('Bedroom','Wardrobe')];
@@ -105,7 +155,7 @@ function requestDeletion(request,title,message){
  pendingDeletion=request;
  document.getElementById('confirm-title').textContent=title;
  document.getElementById('confirm-description').textContent=message;
- document.getElementById('confirm-accept').textContent=request.kind==='draft'?'Delete draft':'Delete record';
+ document.getElementById('confirm-accept').textContent=request.kind==='draft'?'Delete draft':request.kind==='property'?'Delete Property':'Delete record';
  confirmDialog.showModal();
  document.getElementById('confirm-cancel').focus();
 }
@@ -135,6 +185,20 @@ function executeDeletion(){
   if(data.draft?.id===request.id){data.draft=null;data.selectedKey=null}
   if(!persist()){data.drafts=oldDrafts;data.draft=oldActive;data.selectedKey=oldKey;return}
   render();toast('Draft deleted');
+ }else if(request.kind==='property'){
+  const existing=propertyById(request.id);
+  if(!existing||data.properties.length<=1)return;
+  if(data.records.some(r=>r.propertyId===request.id)||data.drafts.some(d=>d.propertyId===request.id)){
+   toast('This property has saved evidence. Delete its inspections and drafts first.');return;
+  }
+  const oldProperties=data.properties,oldPropertyId=data.propertyId,oldRecordsProperty=data.recordsProperty;
+  data.properties=data.properties.filter(p=>p.id!==request.id);
+  if(data.propertyId===request.id)data.propertyId=data.properties[0].id;
+  if(data.recordsProperty===request.id)data.recordsProperty=data.propertyId;
+  if(!persist()){
+   data.properties=oldProperties;data.propertyId=oldPropertyId;data.recordsProperty=oldRecordsProperty;return;
+  }
+  data.deletePropertyMode=false;render();toast('Property deleted');
  }else if(request.kind==='record'){
   const idx=data.records.findIndex(r=>r.id===request.id);
   if(idx<0)return;
@@ -162,7 +226,7 @@ function draftsPage(){
  ${saved.length?saved.map(d=>{const count=(d.selected||[]).length;const completed=(d.selected||[]).filter(k=>d.details?.[k]?.condition).length;return `<section class="draft-card"><div class="draft-card-main"><span class="item-badge">${ico('file',19)}</span><div class="grow"><h3>${escapeHtml(propName(d.propertyId))}</h3><p>${d.type==='move-out'?'Move-out':'Move-in'} · ${completed}/${count} item${count===1?'':'s'} recorded</p><small>Last edited ${fmtDate(d.updatedAt||d.startedAt)}</small></div></div><div class="draft-actions"><button type="button" class="action-btn" data-a="resume-draft" data-v="${escapeHtml(d.id)}">Continue ${ico('chevron',16)}</button><button type="button" class="outline-btn delete-draft" data-a="delete-draft" data-v="${escapeHtml(d.id)}" aria-label="Delete draft for ${escapeHtml(propName(d.propertyId))}">${ico('trash',17)} Delete</button></div></section>`}).join(''):`<div class="card empty"><div class="empty-icon">${ico('file',29)}</div><h3>No drafts saved</h3><p>Unfinished inspections will appear here. Start a new inspection whenever you're ready.</p></div>`}
  <button class="outline-btn full" type="button" data-a="nav" data-v="dashboard" style="margin-top:16px">${ico('arrow',17)} Back to dashboard</button></div>`;
 }
-function learnMore(){return `${header()}<div class="page">${navhead('How MoveProof works','A simple guide to inspections')}<div class="eyebrow">About this app</div><h2 class="flow-title">Record the condition of your home</h2><p class="subhead">MoveProof helps renters create a private, dated record of a property's visible condition, especially when moving in or moving out.</p><div class="guide-stack"><section class="guide-step"><span class="guide-number">1</span><div><h3>Choose your property</h3><p>Add your apartment or villa and select move-in or move-out.</p></div></section><section class="guide-step"><span class="guide-number">2</span><div><h3>Inspect rooms and items</h3><p>Select items, mark their condition and add photographs or written notes. You can save multiple unfinished inspections as drafts.</p></div></section><section class="guide-step"><span class="guide-number">3</span><div><h3>Review your records</h3><p>Finish the inspection to save a dated record. Browse it by property, room and item, and compare move-in and move-out records when both exist.</p></div></section></div><div class="notice neutral">${ico('info',18)}<div class="notice-body">Records are kept on this device. This prototype does not provide cloud backup or determine legal responsibility for damage.</div></div><button type="button" class="action-btn full" data-a="nav" data-v="dashboard" style="margin-top:22px">Back to inspection workspace</button></div>`}
+function learnMore(){return `${header()}<div class="page">${navhead('How MoveProof works','A simple guide to inspections')}<div class="eyebrow">About this app</div><h2 class="flow-title">Record the condition of your home</h2><p class="subhead">MoveProof helps renters create a private, dated record of a property's visible condition, especially when moving in or moving out.</p><div class="guide-stack"><section class="guide-step"><span class="guide-number">1</span><div><h3>Choose your property</h3><p>Add your apartment or villa and select move-in or move-out.</p></div></section><section class="guide-step"><span class="guide-number">2</span><div><h3>Inspect rooms and items</h3><p>Select items, mark their condition and add photographs or written notes. You can save multiple unfinished inspections as drafts.</p></div></section><section class="guide-step"><span class="guide-number">3</span><div><h3>Review your records</h3><p>Finish the inspection to save a dated record. Browse it by property, room and item, and compare move-in and move-out records when both exist.</p></div></section></div><div class="notice neutral">${ico('info',18)}<div class="notice-body">Records are kept on this device. This app does not provide cloud backup or determine legal responsibility for damage.</div></div><button type="button" class="action-btn full" data-a="nav" data-v="dashboard" style="margin-top:22px">Back to inspection workspace</button></div>`}
 
 function allItems(room){const src=ROOMS.find(r=>r.name===room);return [...(src?.items||[]),...(data.draft?.custom||[]).filter(x=>x.room===room).map(x=>x.name)]}
 function isStandardKey(key){const {room,name}=parseKey(key);return !!ROOMS.find(r=>r.name===room)?.items.includes(name)}
@@ -365,23 +429,37 @@ dlg.addEventListener('close',()=>{if(data.cameraStream){for(const track of data.
 app.addEventListener('submit',e=>{
  if(e.target.id!=='property-form')return;
  e.preventDefault();
- const val=id=>document.getElementById(id)?.value.trim()||'';
- const type=val('property-type'),building=val('property-building'),street=val('property-street'),zone=val('property-zone'),unit=val('property-unit');
- if(!building||!street||!zone){toast('Building / Villa, Street and Zone are required.');return}
- if(!/^\d{1,10}$/.test(zone)||!/^\d{1,20}$/.test(street)){toast('Use numeric Zone and Street numbers.');return}
- const name=val('property-name')||`${type} ${building} · Zone ${zone}`;
- if(data.properties.some(p=>p.name.toLowerCase()===name.toLowerCase())){toast('Choose a different property name.');return}
- const newProp={id:id(),name,type,building,street,zone,unit};
- data.properties.push(newProp);
- const previous=data.propertyId;
- data.propertyId=newProp.id;
- if(!persist()) { data.properties.pop();data.propertyId=previous;return }
- data.showPropertyForm=false;render();toast('Property added and selected');
+ const value=name=>(document.getElementById('property-'+name)?.value||'').trim();
+ const type=value('type'),building=value('building'),street=value('street'),zone=value('zone');
+ const old=data.editingPropertyId?propertyById(data.editingPropertyId):null;
+ if(!['Apartment','Villa'].includes(type)){toast('Choose Apartment or Villa.');return}
+ let invalid=false;
+ for(const field of ['building','street','zone']){
+  const val={building,street,zone}[field];
+  const error=validatePropertyInput(field,val);
+  propertyFieldError(field,error);if(error)invalid=true;
+ }
+ if(invalid){toast('Check the address fields. Street and zone must contain numbers only.');return}
+ const name=value('name')||`${type} ${building} · Zone ${zone}`;
+ if(data.properties.some(p=>p.id!==old?.id&&p.name.toLowerCase()===name.toLowerCase())){
+  toast('Choose a different property name.');return;
+ }
+ const previousProperties=data.properties,previousId=data.propertyId;
+ if(old){data.properties=data.properties.map(p=>p.id===old.id?{...p,name,type,building,street,zone}:p);data.propertyId=old.id}
+ else{const created={id:id(),name,type,building,street,zone,unit:''};data.properties=[...data.properties,created];data.propertyId=created.id}
+ if(!persist()){data.properties=previousProperties;data.propertyId=previousId;return}
+ data.showPropertyForm=false;data.editingPropertyId=null;render();toast(old?'Property updated':'Property added and selected');
 });
 app.addEventListener('click',async(e)=>{const button=e.target.closest('[data-a]');if(!button)return;const action=button.dataset.a,v=button.dataset.v;
 switch(action){
 case 'nav':nav(v);break;
-case 'toggle-property':data.showPropertyForm=!data.showPropertyForm;render();if(data.showPropertyForm)document.getElementById('property-type')?.focus();break;
+case 'toggle-property':if(data.showPropertyForm)closePropertyForm();else openPropertyForm();break;
+case 'add-property':openPropertyForm();break;
+case 'edit-property':openPropertyForm(v);break;
+case 'close-property-form':closePropertyForm();break;
+case 'toggle-delete-property-mode':data.deletePropertyMode=!data.deletePropertyMode;render();break;
+case 'delete-property':requestPropertyDeletion(v);break;
+case 'select-property':data.propertyId=v;persist();render();break;
 case 'view-photo':{const rec=data.records.find(r=>r.id===v);const photo=rec?.items.find(i=>i.key===button.dataset.k)?.photo;if(photo)openPhoto(photo,`${propName(rec.propertyId)} · ${parseKey(button.dataset.k).name} · ${fmtDate(rec.date)}`);break}
 case 'view-draft-photo':{const d=detail();if(d?.photo)openPhoto(d.photo,`${parseKey(data.selectedKey).name} · current inspection`);break}
 case 'set-type':data.type=v;persist();render();break;
@@ -425,8 +503,22 @@ case 'item-check':{const key=t.value;if(t.checked&&!data.draft.selected.includes
 case 'condition':detail().condition=t.value;persist();render();break;
 
 }});
-app.addEventListener('input',e=>{if(!data.draft)return;if(e.target.dataset.field==='notes'){detail().notes=e.target.value;persist()}if(e.target.dataset.field==='description'){detail().description=e.target.value;persist()}});
+app.addEventListener('input',e=>{
+ const field=e.target.id?.match(/^property-(building|street|zone)$/)?.[1];
+ if(field){
+  const input=e.target;
+  if(field==='street'||field==='zone'){
+   const before=input.value;input.value=before.replace(/[^0-9]/g,'');
+   propertyFieldError(field,before===input.value?'':'Numbers only.');
+  }else{
+   const before=input.value;input.value=before.replace(/[^0-9A-Za-z]/g,'');
+   propertyFieldError(field,before===input.value?'':'Use a number, optionally followed by one letter.');
+  }
+  return;
+ }
+ if(!data.draft)return;if(e.target.dataset.field==='notes'){detail().notes=e.target.value;persist()}if(e.target.dataset.field==='description'){detail().description=e.target.value;persist()}});
 window.addEventListener('beforeunload',stopCamera);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&data.showPropertyForm){closePropertyForm()}});
 // Clean up old fictional sample entries stored by the earlier Android app.
 // This runs once on upgrade and saves the corrected history without resetting other data.
 if ((Array.isArray(stored?.records) && stored.records.length !== data.records.length) || (stored?.draft && !Array.isArray(stored?.drafts))) persist();

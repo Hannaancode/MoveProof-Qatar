@@ -2,6 +2,12 @@
 
 This repository contains the Android Studio project; APKs are produced by the build script or GitHub Actions, and are not directly included in source control. It embeds the five-screen HTML/CSS/JS interface and supports native Android camera and gallery permission handling. It does not need a server or a Play Console account for testing.
 
+## Property manager and updated palette (November 2026)
+
+The selected-property control now includes an address bar (House No., Street, Zone) and an Apartments & Villas list with selectable properties, Add Property, Edit, and an explicit Delete Mode with confirmation. Street and Zone accept digits only; House Number accepts digits optionally followed by a letter (e.g., `12A`). Property edits keep the original property ID, preserving links to existing inspection records. Deletion is blocked for the final remaining property and when the property has linked drafts or saved inspections to protect evidence. Properties are persisted locally in the existing storage key, including deletions of the original sample entries.
+
+**Expanded Qatar palette (primary):** Maroon `#8A1538`, Sand `#E9DDC9`, Off-white `#F8F6F4`, White `#FFFFFF`, Dark `#1F2430`. Previous tokens (`#75254c`, `#51162f`, `#232832`) remain available as `--legacy-*` CSS variables. This palette is applied consistently to the Android interface and the iPhone PWA.
+
 ## How to build an APK on Windows (free)
 
 1. Install **Android Studio** (free) from https://developer.android.com/studio, including Android SDK **API 36** and SDK Build Tools.

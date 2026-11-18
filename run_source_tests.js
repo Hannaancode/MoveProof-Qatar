@@ -4,7 +4,7 @@ const path=require('node:path');
 const code=fs.readFileSync(path.join(__dirname,'app/src/main/assets/app.js'),'utf8');
 const outputs=[];
 const elements={};
-function el(id){if(!elements[id])elements[id]={innerHTML:'',textContent:'',value:'',open:false,classList:{add(){},remove(){}},handlers:{},addEventListener(type,handler){this.handlers[type]=handler},focus(){},showModal(){this.open=true},close(){this.open=false},getContext(){return {drawImage(){}}},toDataURL(){return 'data:image/jpeg;base64,ZmFrZQ=='},play:async()=>{}};return elements[id]}
+function el(id){if(!elements[id])elements[id]={id,innerHTML:'',textContent:'',value:'',open:false,classList:{add(){},remove(){}},handlers:{},addEventListener(type,handler){this.handlers[type]=handler},focus(){},setAttribute(name,value){this[name]=value},showModal(){this.open=true},close(){this.open=false},getContext(){return {drawImage(){}}},toDataURL(){return 'data:image/jpeg;base64,ZmFrZQ=='},play:async()=>{}};return elements[id]}
 const storage=new Map();
 const doc={getElementById:el,createElement:(tag)=>el('created-'+tag),querySelector:()=>el('query'),addEventListener(){}};
 const ctx={document:doc,window:{isSecureContext:true,scrollTo(){},addEventListener(){},navigator:null},navigator:{},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},crypto:require('node:crypto').webcrypto,structuredClone,Date,Math,JSON,String,console,clearTimeout,setTimeout,confirm:()=>true};
@@ -20,14 +20,86 @@ test('All eight views are wired',()=>{for(const x of ['dashboard','rooms','condi
 test('Add-apartment form offers required Qatar address fields',()=>{
  run("data.page='dashboard';data.showPropertyForm=true;render()");
  const html=el('app').innerHTML;
- for(const id of ['property-type','property-building','property-street','property-zone','property-unit'])assert.match(html,new RegExp('id="'+id+'"'));
+ for(const id of ['property-type','property-name','property-building','property-street','property-zone'])assert.match(html,new RegExp('id="'+id+'"'));
 });
 test('Custom apartment is available in selector and saved locally',()=>{
  run("data.properties.push({id:'tester-villa',name:'Tester villa',type:'Villa',building:'21',street:'300',zone:'56',unit:''});data.propertyId='tester-villa';persist();render()");
  assert.match(el('app').innerHTML,/Tester villa/);
- assert.match(el('app').innerHTML,/Zone 56/);
+ assert.match(el('app').innerHTML,/<strong>Zone<\/strong><span>56<\/span>/);
  assert.match(storage.get('moveproof-qatar-prototype-v1'),/tester-villa/);
  run("data.propertyId='al-sadd';data.showPropertyForm=false;render()");
+});
+test('Property manager displays address, list, edit and delete-mode controls',()=>{
+ run("data.page='dashboard';data.showPropertyForm=false;data.deletePropertyMode=false;render()");
+ const html=el('app').innerHTML;
+ for(const name of ['House No.','Street','Zone','APARTMENTS &amp; VILLAS'])assert.match(html,new RegExp(name.replace('.','\\.')));
+ assert.match(html,/data-a="select-property"/);
+ assert.match(html,/data-a="edit-property"/);
+ assert.match(html,/data-a="toggle-delete-property-mode"/);
+});
+test('Property address form displays new modal and prefilled edit values',()=>{
+ run("openPropertyForm('al-sadd')");
+ assert.match(el('app').innerHTML,/aria-modal="true"/);
+ assert.match(el('app').innerHTML,/Edit Property/);
+ run("closePropertyForm();openPropertyForm()");
+ assert.match(el('app').innerHTML,/Add Property/);
+ assert.match(el('app').innerHTML,/Numbers only/);
+ run("closePropertyForm()");
+});
+test('Numeric-only validation sanitizes invalid Street/Zone characters',()=>{
+ run("openPropertyForm()");
+ const street=el('property-street');street.value='40x2';
+ el('app').handlers.input({target:street});
+ assert.equal(street.value,'402');
+ assert.match(el('property-street-error').textContent,/Numbers only/);
+ const zone=el('property-zone');zone.value='5e+6';el('app').handlers.input({target:zone});
+ assert.equal(zone.value,'56');
+ run("closePropertyForm()");
+});
+test('Adding and editing property persist ID and associated address changes',()=>{
+ run("openPropertyForm()");
+ Object.assign(el('property-type'),{value:'Villa'});
+ Object.assign(el('property-name'),{value:'Ain Khaled Test Villa'});
+ Object.assign(el('property-building'),{value:'12A'});
+ Object.assign(el('property-street'),{value:'432'});
+ Object.assign(el('property-zone'),{value:'55'});
+ el('app').handlers.submit({target:{id:'property-form'},preventDefault(){}});
+ const prop=run('data.properties.find(p=>p.name===\"Ain Khaled Test Villa\")');
+ assert.ok(prop);assert.equal(prop.building,'12A');assert.equal(prop.street,'432');
+ assert.equal(run('data.propertyId'),prop.id);
+ ctx.propertyTestId=prop.id;
+ run('openPropertyForm(propertyTestId)');
+ assert.match(el('app').innerHTML,/value="Ain Khaled Test Villa"/);
+ Object.assign(el('property-type'),{value:'Villa'});
+ Object.assign(el('property-name'),{value:'Updated Villa Name'});
+ Object.assign(el('property-building'),{value:'77'});
+ Object.assign(el('property-street'),{value:'999'});
+ Object.assign(el('property-zone'),{value:'22'});
+ el('app').handlers.submit({target:{id:'property-form'},preventDefault(){}});
+ assert.equal(run('data.properties.find(p=>p.id===propertyTestId).name'),'Updated Villa Name');
+ assert.equal(run('data.properties.find(p=>p.id===propertyTestId).street'),'999');
+ assert.equal(run('data.propertyId'),prop.id);
+ assert.match(storage.get('moveproof-qatar-prototype-v1'),/Updated Villa Name/);
+});
+test('Property deletion requires confirmation and remains deleted after persistence',()=>{
+ const pid=ctx.propertyTestId;
+ run('requestPropertyDeletion(propertyTestId)');
+ assert.equal(el('confirm-dialog').open,true);
+ assert.match(el('confirm-title').textContent,/Delete Property/);
+ el('confirm-cancel').handlers.click();
+ assert.ok(run('data.properties.some(p=>p.id===propertyTestId)'));
+ run('requestPropertyDeletion(propertyTestId)');
+ el('confirm-accept').handlers.click();
+ assert.equal(run('data.properties.some(p=>p.id===propertyTestId)'),false);
+ assert.doesNotMatch(storage.get('moveproof-qatar-prototype-v1'),/Updated Villa Name/);
+ delete ctx.propertyTestId;
+});
+test('Property with saved inspection evidence cannot be deleted',()=>{
+ run("data.records.push({id:'property-evidence-guard',propertyId:'west-bay',type:'move-in',items:[{key:'Bedroom::Door',condition:'Good'}]});");
+ run("requestPropertyDeletion('west-bay')");
+ assert.equal(el('confirm-dialog').open,false);
+ assert.ok(run("data.properties.some(p=>p.id==='west-bay')"));
+ run("data.records=data.records.filter(r=>r.id!=='property-evidence-guard')");
 });
 test('Full-photo viewer and uncropped records are wired',()=>{
  const html=fs.readFileSync(path.join(__dirname,'app/src/main/assets/index.html'),'utf8');
