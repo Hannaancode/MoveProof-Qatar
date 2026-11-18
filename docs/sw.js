@@ -1,7 +1,7 @@
 /* Cache app code and icons, never users' inspection data or recorded videos. */
 'use strict';
-const CACHE='moveproof-ios-shell-2026-11-18-v13-moveout-selector';
-const SHELL=['./','./index.html','./styles.css?v=mp-20261118-moveout-selector-v1','./app.js?v=mp-20261118-moveout-selector-v1','./pwa-media.js','./pwa-init.js?v=mp-20261118-moveout-selector-v1','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-180.png'];
+const CACHE='moveproof-ios-shell-2026-11-18-v14-moveout-selector';
+const SHELL=['./','./index.html','./styles.css?v=mp-20261118-moveout-selector-v2','./app.js?v=mp-20261118-moveout-selector-v2','./pwa-media.js','./pwa-init.js?v=mp-20261118-moveout-selector-v2','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-180.png'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));
 });

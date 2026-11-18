@@ -124,6 +124,9 @@ ${data.showPropertyForm?propertyForm():''}
 <button class="quick-link" type="button" data-a="last"><span class="link-icon">${ico('clock',21)}</span><span class="grow"><strong>Last inspection</strong><small>${last?`${last.type==='move-in'?'Move-in':'Move-out'} · ${fmtDate(last.date)}${last.demo?' · Sample':''}`:'No inspections saved'}</small></span><span class="chevron">${ico('chevron',17)}</span></button>
 <p class="footer-note">${ico('lock',13)} Inspection records stored locally on this device</p></div>`}
 
+function beginNewInspection(){if(data.type==='move-out'){data.moveoutIndependentOpen=false;nav('moveout-select')}else startNew()}
+function beginLinkedMoveOut(propertyId){if(!propertyById(propertyId))return;const state=moveOutState(propertyId);if(!state.missing.length){toast('There are no outstanding move-out items for this property.');return}startMoveOutFromHistory(propertyId,state.missing)}
+function toggleIndependentOptions(){data.moveoutIndependentOpen=!data.moveoutIndependentOpen;render()}
 function moveOutSelectionPage(){
  const pending=data.properties.map(property=>({property,state:moveOutState(property.id)})).filter(entry=>entry.state.missing.length>0);
  return `${header()}<div class="page">${navhead('Start move-out inspection','Choose an existing move-in or create a standalone record')}
@@ -536,9 +539,9 @@ case 'select-property':if(!propertyById(v))break;data.propertyId=v;data.property
 case 'view-photo':{const rec=data.records.find(r=>r.id===v);const photo=rec?.items.find(i=>i.key===button.dataset.k)?.photo;if(photo)openPhoto(photo,`${propName(rec.propertyId)} · ${parseKey(button.dataset.k).name} · ${fmtDate(rec.date)}`);break}
 case 'view-draft-photo':{const d=detail();if(d?.photo)openPhoto(d.photo,`${parseKey(data.selectedKey).name} · current inspection`);break}
 case 'set-type':data.type=v;persist();render();break;
-case 'new':if(data.type==='move-out'){data.moveoutIndependentOpen=false;nav('moveout-select')}else startNew();break;
-case 'moveout-linked':{if(!propertyById(v))break;const state=moveOutState(v);if(!state.missing.length){toast('There are no outstanding move-out items for this property.');break;}startMoveOutFromHistory(v,state.missing);break}
-case 'moveout-independent-toggle':data.moveoutIndependentOpen=!data.moveoutIndependentOpen;render();break;
+case 'new':beginNewInspection();break;
+case 'moveout-linked':beginLinkedMoveOut(v);break;
+case 'moveout-independent-toggle':toggleIndependentOptions();break;
 case 'moveout-independent':startIndependentMoveOut(v);break;
 case 'drafts':nav('drafts');break;
 case 'resume-draft':resumeDraft(v);break;
