@@ -262,3 +262,17 @@ body{background:#FFFFFF;color:var(--ink)}
 .inspection-delete-choice small{display:block;color:var(--secondary);font-size:11px;margin-top:4px}
 .inspection-delete-choice:focus-visible{outline:2px solid var(--wine);outline-offset:2px}
 .inspection-delete-choice:hover{background:var(--sand-tint)}
+
+/* Move-out selection uses the existing white-card, sand-icon and maroon-action palette. */
+.moveout-selector-section{margin-top:18px}
+.moveout-selector-section h3{color:var(--ink)}
+.moveout-selector-section>.small-meta{margin:3px 0 13px}
+.moveout-selector-list{display:grid;gap:9px;margin-top:12px}
+.moveout-selector-choice{display:flex;align-items:center;gap:11px;width:100%;min-height:67px;padding:12px;text-align:left;background:#FFFFFF;color:var(--ink);border:1px solid var(--line);border-radius:13px}
+.moveout-selector-choice>.grow{min-width:0}
+.moveout-selector-choice strong{display:block;font-size:14px;overflow-wrap:anywhere}
+.moveout-selector-choice small{display:block;margin-top:4px;color:var(--secondary);font-size:11px;line-height:1.4}
+.moveout-selector-choice>.icon:last-child{color:var(--wine)}
+.moveout-selector-choice:hover{background:var(--sand-tint)}
+.moveout-selector-choice:focus-visible{outline:3px solid #8a153855;outline-offset:2px}
+.moveout-selector-section .item-badge{background:var(--sand);color:var(--wine)}

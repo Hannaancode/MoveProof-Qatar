@@ -52,11 +52,11 @@ const propAddress=x=>{const p=propertyById(x);if(!p)return '';return [p.zone&&`Z
 const stored=(()=>{try{return JSON.parse(localStorage.getItem(STORE)||'null');}catch{return null}})();
 const storedDrafts=(Array.isArray(stored?.drafts)?stored.drafts:(stored?.draft?[stored.draft]:[])).filter(d=>d&&typeof d==='object'&&d.id&&Array.isArray(d.selected)&&d.details);
 const activeDraft=storedDrafts.find(d=>d.id===stored?.activeDraftId)||(stored?.draft?storedDrafts[0]:null);
-const data={properties:Array.isArray(stored?.properties)&&stored.properties.some(p=>p&&p.id)?stored.properties.filter(p=>p&&p.id):structuredClone(DEFAULT_PROPERTIES),showPropertyForm:false,editingPropertyId:null,deletePropertyMode:false,propertyMenuOpen:false,records:Array.isArray(stored?.records)?stored.records.filter(isRealRecord):[],drafts:storedDrafts,draft:activeDraft,propertyId:stored?.propertyId||'al-sadd',type:stored?.type||'move-in',page:'dashboard',openedRoom:'Bedroom',customFormRoom:null,selectedKey:null,returnReview:false,photoError:'',skipPhoto:false,recordsProperty:stored?.propertyId||'al-sadd',recordsItem:'Bedroom::Wardrobe',recordsRoom:'',recordsDeleteOpen:false,lastFinishedId:null,toastTimer:null,cameraStream:null};
+const data={properties:Array.isArray(stored?.properties)&&stored.properties.some(p=>p&&p.id)?stored.properties.filter(p=>p&&p.id):structuredClone(DEFAULT_PROPERTIES),showPropertyForm:false,editingPropertyId:null,deletePropertyMode:false,propertyMenuOpen:false,moveoutIndependentOpen:false,records:Array.isArray(stored?.records)?stored.records.filter(isRealRecord):[],drafts:storedDrafts,draft:activeDraft,propertyId:stored?.propertyId||'al-sadd',type:stored?.type||'move-in',page:'dashboard',openedRoom:'Bedroom',customFormRoom:null,selectedKey:null,returnReview:false,photoError:'',skipPhoto:false,recordsProperty:stored?.propertyId||'al-sadd',recordsItem:'Bedroom::Wardrobe',recordsRoom:'',recordsDeleteOpen:false,lastFinishedId:null,toastTimer:null,cameraStream:null};
 const app=document.getElementById('app');const dlg=document.getElementById('camera-dialog');const video=document.getElementById('camera-video');const gallery=document.getElementById('gallery-input');
 function persist(){try{if(data.draft)data.draft.updatedAt=new Date().toISOString();localStorage.setItem(STORE,JSON.stringify({properties:data.properties,records:data.records,drafts:data.drafts,activeDraftId:data.draft?.id||null,propertyId:data.propertyId,type:data.type}));return true}catch(err){toast('Storage limit reached. Photos may not survive a refresh; try fewer or smaller pictures.');return false}}
 function toast(message){const t=document.getElementById('toast');t.textContent=message;t.classList.add('show');clearTimeout(data.toastTimer);data.toastTimer=setTimeout(()=>t.classList.remove('show'),4000)}
-function nav(page){if(page==='dashboard'&&data.draft)persist();if(page!=='dashboard'){data.propertyMenuOpen=false;data.deletePropertyMode=false}if(page!=='record-items')data.recordsDeleteOpen=false;stopCamera();data.page=page;data.photoError='';render();window.scrollTo(0,0)}
+function nav(page){if(page==='dashboard'&&data.draft)persist();if(page!=='dashboard'){data.propertyMenuOpen=false;data.deletePropertyMode=false}if(page!=='record-items')data.recordsDeleteOpen=false;if(page!=='moveout-select')data.moveoutIndependentOpen=false;stopCamera();data.page=page;data.photoError='';render();window.scrollTo(0,0)}
 function header(){return `<header class="topbar"><div class="brand"><div class="brandmark">${ico('home',22)}</div><div class="brandname">MoveProof <span style="font-weight:500">Qatar</span></div></div><span class="chip">OFFLINE</span></header>`}
 function navhead(title,sub,back='dashboard'){return `<div class="nav-header"><button type="button" class="back-icon" data-a="nav" data-v="${back}" aria-label="Back to previous screen">${ico('arrow',20)}</button><div class="nav-copy"><h1 class="nav-title">${escapeHtml(title)}</h1>${sub?`<div class="nav-sub">${escapeHtml(sub)}</div>`:''}</div><button type="button" class="home-icon" data-a="nav" data-v="dashboard" aria-label="Go directly to main menu" title="Main menu">${ico('home',20)}</button></div>`}
 function stepper(active){const names=['Type','Rooms & Items','Inspect','Review'];return `<div class="stepper" aria-label="Inspection progress">${names.map((n,i)=>`<div class="step ${active===i+1?'active':active>i+1?'done':''}" ${active===i+1?'aria-current="step"':''}><div class="num">${active>i+1?ico('check',15):i+1}</div><span>${n}</span></div>`).join('')}</div>`}
@@ -123,6 +123,45 @@ ${data.showPropertyForm?propertyForm():''}
 <button class="quick-link" type="button" data-a="records"><span class="link-icon">${ico('folder',21)}</span><span class="grow"><strong>Previous records</strong><small>View history and compare conditions</small></span><span class="chevron">${ico('chevron',17)}</span></button>
 <button class="quick-link" type="button" data-a="last"><span class="link-icon">${ico('clock',21)}</span><span class="grow"><strong>Last inspection</strong><small>${last?`${last.type==='move-in'?'Move-in':'Move-out'} · ${fmtDate(last.date)}${last.demo?' · Sample':''}`:'No inspections saved'}</small></span><span class="chevron">${ico('chevron',17)}</span></button>
 <p class="footer-note">${ico('lock',13)} Inspection records stored locally on this device</p></div>`}
+
+function moveOutSelectionPage(){
+ const pending=data.properties.map(property=>({property,state:moveOutState(property.id)})).filter(entry=>entry.state.missing.length>0);
+ return `${header()}<div class="page">${navhead('Start move-out inspection','Choose an existing move-in or create a standalone record')}
+ <div class="eyebrow">Move-out inspection</div><h2 class="flow-title">Choose how to proceed</h2>
+ <p class="subhead">Properties with outstanding move-out items appear below. You can also record a move-out without a previous move-in.</p>
+ <section class="section-card moveout-selector-section" aria-labelledby="moveout-pending-title">
+ <h3 id="moveout-pending-title">Properties awaiting move-out</h3>
+ ${pending.length?`<div class="moveout-selector-list">${pending.map(({property:p,state})=>{
+   const draft=data.drafts.find(d=>d.propertyId===p.id&&d.type==='move-out'&&d.rentalPeriodId===state.periodId);
+   return `<button type="button" class="moveout-selector-choice" data-a="moveout-linked" data-v="${escapeHtml(p.id)}" aria-label="${draft?'Resume':'Start'} linked move-out for ${escapeHtml(p.name)}, ${state.missing.length} outstanding items"><span class="item-badge">${ico('home',20)}</span><span class="grow"><strong>${escapeHtml(p.name)}</strong><small>${state.missing.length} item${state.missing.length===1?'':'s'} awaiting move-out</small>${draft?'<small>Resume existing move-out draft</small>':''}</span>${ico('chevron',18)}</button>`;
+ }).join('')}</div>`:`<div class="notice neutral" role="status">${ico('info',18)} <span>No properties currently have outstanding move-out items.</span></div>`}
+ </section>
+ <section class="section-card moveout-selector-section" aria-labelledby="moveout-independent-title">
+ <h3 id="moveout-independent-title">No previous move-in record?</h3>
+ <p class="small-meta">Create an independent move-out inspection. It will not be linked to a move-in inspection, so historical comparison will be unavailable.</p>
+ <button type="button" class="outline-btn full" data-a="moveout-independent-toggle" aria-expanded="${data.moveoutIndependentOpen}" aria-controls="moveout-independent-options">${ico('plus',16)} ${data.moveoutIndependentOpen?'Hide independent options':'Start independent move-out'} ${ico(data.moveoutIndependentOpen?'up':'down',16)}</button>
+ ${data.moveoutIndependentOpen?`<div class="moveout-selector-list" id="moveout-independent-options">${data.properties.map(p=>{
+   const draft=data.drafts.find(d=>d.propertyId===p.id&&d.type==='move-out'&&!d.baselineId&&!d.rentalPeriodId);
+   return `<button type="button" class="moveout-selector-choice" data-a="moveout-independent" data-v="${escapeHtml(p.id)}" aria-label="${draft?'Resume independent move-out draft':'Start independent move-out'} for ${escapeHtml(p.name)}"><span class="item-badge">${ico('home',20)}</span><span class="grow"><strong>${escapeHtml(p.name)}</strong><small>${draft?'Resume independent move-out draft':'New inspection without comparison'}</small></span>${ico('chevron',18)}</button>`;
+ }).join('')}</div>`:''}
+ </section></div>`;
+}
+function startIndependentMoveOut(propertyId){
+ if(!propertyById(propertyId)){toast('Select a valid property first.');return}
+ const existing=data.drafts.find(d=>d.propertyId===propertyId&&d.type==='move-out'&&!d.baselineId&&!d.rentalPeriodId);
+ if(existing){resumeDraft(existing.id);return}
+ const oldDraft=data.draft,oldPropertyId=data.propertyId,oldType=data.type;
+ const key=itemKey('Bedroom','Wardrobe');
+ const created={id:id(),propertyId,type:'move-out',rentalPeriodId:null,baselineId:null,startedAt:new Date().toISOString(),updatedAt:new Date().toISOString(),selected:[key],custom:[],details:{}};
+ data.drafts.push(created);data.draft=created;data.propertyId=propertyId;data.type='move-out';
+ if(!persist()){
+  data.drafts=data.drafts.filter(d=>d.id!==created.id);
+  data.draft=oldDraft;data.propertyId=oldPropertyId;data.type=oldType;return;
+ }
+ data.openedRoom='Bedroom';data.selectedKey=key;data.returnReview=false;
+ nav('rooms');
+}
+
 function startNew(){
   const status=data.type==='move-out'?moveOutState(data.propertyId):null;
   const selected=status?.missing.length?[...status.missing]:[itemKey('Bedroom','Wardrobe')];
@@ -418,7 +457,7 @@ photoStage.addEventListener('pointerup',clearPhotoPointer);
 photoStage.addEventListener('pointercancel',clearPhotoPointer);
 photoStage.addEventListener('dblclick',()=>zoomPhoto(photoState.scale>1?1:2));
 function completedPage(){const rec=data.records.find(r=>r.id===data.lastFinishedId);return `${header()}<div class="page finished-page">${navhead('Inspection completed','Your record is saved')}<div class="completed-panel">${ico('check',34)}<h2>Inspection saved successfully</h2><p>${rec?`${escapeHtml(propName(rec.propertyId))} · ${rec.type==='move-in'?'Move-in':'Move-out'} · ${rec.items.length} documented item${rec.items.length===1?'':'s'}`:'Your inspection is saved on this device.'}</p></div><button class="action-btn full" data-a="nav" data-v="dashboard">${ico('home',18)} Return to Main Menu</button><button class="outline-btn full" style="margin-top:10px" data-a="view-completed-record">${ico('folder',17)} View saved inspection</button><p class="footer-note">Your inspection remains on this device. Back up important evidence separately.</p></div>`}
-function render(){let contents='';if(data.page==='dashboard')contents=dashboard();else if(data.page==='rooms')contents=rooms();else if(data.page==='condition')contents=condition();else if(data.page==='review')contents=review();else if(data.page==='drafts')contents=draftsPage();else if(data.page==='learn-more')contents=learnMore();else if(data.page==='record-properties')contents=recordsProperties();else if(data.page==='record-items')contents=recordsItems();else if(data.page==='record-detail')contents=recordDetail();else if(data.page==='completed')contents=completedPage();app.innerHTML=contents}
+function render(){let contents='';if(data.page==='dashboard')contents=dashboard();else if(data.page==='rooms')contents=rooms();else if(data.page==='condition')contents=condition();else if(data.page==='review')contents=review();else if(data.page==='drafts')contents=draftsPage();else if(data.page==='moveout-select')contents=moveOutSelectionPage();else if(data.page==='learn-more')contents=learnMore();else if(data.page==='record-properties')contents=recordsProperties();else if(data.page==='record-items')contents=recordsItems();else if(data.page==='record-detail')contents=recordDetail();else if(data.page==='completed')contents=completedPage();app.innerHTML=contents}
 function selectNextItem(){const dr=data.draft;if(!dr)return;const idx=dr.selected.indexOf(data.selectedKey);const next=dr.selected.slice(idx+1).find(k=>!dr.details[k]?.condition);if(next){data.selectedKey=next;data.returnReview=false;nav('condition')}else{data.openedRoom=parseKey(data.selectedKey).room;nav('review')}}
 function saveItem(){const d=detail();if(!d?.condition){toast('Choose Good, Damaged or Unsure before saving this item.');document.querySelector('input[name="condition"]')?.focus();return}d.timestamp=new Date().toISOString();if(d.photo||d.videoUri)d.ack=false;data.draft.details[data.selectedKey]=d;persist();toast('Item condition saved');if(data.returnReview){data.returnReview=false;data.openedRoom=parseKey(data.selectedKey).room;nav('review')}else selectNextItem()}
 function editItem(key){data.selectedKey=key;data.returnReview=true;nav('condition')}
@@ -497,7 +536,10 @@ case 'select-property':if(!propertyById(v))break;data.propertyId=v;data.property
 case 'view-photo':{const rec=data.records.find(r=>r.id===v);const photo=rec?.items.find(i=>i.key===button.dataset.k)?.photo;if(photo)openPhoto(photo,`${propName(rec.propertyId)} · ${parseKey(button.dataset.k).name} · ${fmtDate(rec.date)}`);break}
 case 'view-draft-photo':{const d=detail();if(d?.photo)openPhoto(d.photo,`${parseKey(data.selectedKey).name} · current inspection`);break}
 case 'set-type':data.type=v;persist();render();break;
-case 'new':startNew();break;
+case 'new':if(data.type==='move-out'){data.moveoutIndependentOpen=false;nav('moveout-select')}else startNew();break;
+case 'moveout-linked':{if(!propertyById(v))break;const state=moveOutState(v);if(!state.missing.length){toast('There are no outstanding move-out items for this property.');break;}startMoveOutFromHistory(v,state.missing);break}
+case 'moveout-independent-toggle':data.moveoutIndependentOpen=!data.moveoutIndependentOpen;render();break;
+case 'moveout-independent':startIndependentMoveOut(v);break;
 case 'drafts':nav('drafts');break;
 case 'resume-draft':resumeDraft(v);break;
 case 'delete-draft':deleteDraft(v);break;

@@ -595,6 +595,103 @@ test('Original Android and iPhone screen logic stays present after colour-only u
   }
  }
 });
+
+function withMoveOutScenario(records,fn){
+ const previous={
+  records:run('data.records'),drafts:run('data.drafts'),draft:run('data.draft'),
+  propertyId:run('data.propertyId'),type:run('data.type'),page:run('data.page'),
+  openedRoom:run('data.openedRoom'),selectedKey:run('data.selectedKey'),
+  returnReview:run('data.returnReview'),independentOpen:run('data.moveoutIndependentOpen')
+ };
+ ctx.moveScenarioRecords=records;
+ try{
+  run("data.records=moveScenarioRecords;data.drafts=[];data.draft=null;data.propertyId='west-bay';data.type='move-out';data.page='dashboard';data.moveoutIndependentOpen=false;render()");
+  fn();
+ }finally{
+  ctx.restoreMoveState=previous;
+  run("data.records=restoreMoveState.records;data.drafts=restoreMoveState.drafts;data.draft=restoreMoveState.draft;data.propertyId=restoreMoveState.propertyId;data.type=restoreMoveState.type;data.page=restoreMoveState.page;data.openedRoom=restoreMoveState.openedRoom;data.selectedKey=restoreMoveState.selectedKey;data.returnReview=restoreMoveState.returnReview;data.moveoutIndependentOpen=restoreMoveState.independentOpen;persist();render()");
+  delete ctx.restoreMoveState;delete ctx.moveScenarioRecords;
+ }
+}
+test('Start Move-out shows all pending properties, not just dashboard selection',()=>withMoveOutScenario([
+ makeRecord('baseline-a','al-sadd',[makeItem('Bedroom::Wardrobe')])
+],()=>{
+ click('new');
+ assert.equal(run('data.page'),'moveout-select');
+ const html=el('app').innerHTML;
+ assert.match(html,/Properties awaiting move-out/);
+ assert.match(html,/data-a="moveout-linked" data-v="al-sadd"/);
+ assert.doesNotMatch(html,/data-a="moveout-linked" data-v="west-bay"/);
+ assert.match(html,/Start independent move-out/);
+ assert.equal(run('data.drafts.length'),0);
+}));
+test('Linked move-out uses existing baseline and resumes draft without duplication',()=>withMoveOutScenario([
+ makeRecord('baseline-b','al-sadd',[makeItem('Bedroom::Wardrobe'),makeItem('Kitchen::Sink')])
+],()=>{
+ run("nav('moveout-select')");
+ click('moveout-linked','al-sadd');
+ assert.equal(run('data.draft.baselineId'),'baseline-b');
+ assert.equal(run('data.draft.type'),'move-out');
+ assert.equal(run('data.draft.selected.length'),2);
+ assert.equal(run('data.propertyId'),'al-sadd');
+ const draftId=run('data.draft.id');
+ run("nav('moveout-select')");
+ click('moveout-linked','al-sadd');
+ assert.equal(run('data.draft.id'),draftId);
+ assert.equal(run('data.drafts.length'),1);
+}));
+test('Fully completed move-out properties are not shown as pending',()=>withMoveOutScenario([
+ {...makeRecord('baseline-c','al-sadd',[makeItem('Bedroom::Wardrobe')]),rentalPeriodId:'period-c'},
+ {...makeRecord('completed-c','al-sadd',[makeItem('Bedroom::Wardrobe')],'move-out'),rentalPeriodId:'period-c'}
+],()=>{
+ run("nav('moveout-select')");
+ const html=el('app').innerHTML;
+ assert.match(html,/No properties currently have outstanding move-out items/);
+ assert.doesNotMatch(html,/data-a="moveout-linked"/);
+}));
+test('Independent move-out works without a move-in and never invents a baseline',()=>withMoveOutScenario([
+ makeRecord('baseline-d','al-sadd',[makeItem('Bedroom::Wardrobe')])
+],()=>{
+ run("nav('moveout-select')");
+ click('moveout-independent-toggle');
+ assert.match(el('app').innerHTML,/data-a="moveout-independent" data-v="west-bay"/);
+ click('moveout-independent','west-bay');
+ assert.equal(run('data.page'),'rooms');
+ assert.equal(run('data.draft.propertyId'),'west-bay');
+ assert.equal(run('data.draft.baselineId'),null);
+ assert.equal(run('data.draft.rentalPeriodId'),null);
+ assert.equal(run('data.draft.type'),'move-out');
+ assert.equal(run('data.drafts.length'),1);
+}));
+test('Standalone mode reuses draft even if a move-in exists',()=>withMoveOutScenario([
+ makeRecord('baseline-e','al-sadd',[makeItem('Bedroom::Wardrobe')])
+],()=>{
+ run("startIndependentMoveOut('al-sadd')");
+ const draftId=run('data.draft.id');
+ assert.equal(run('data.draft.baselineId'),null);
+ run("nav('moveout-select');startIndependentMoveOut('al-sadd')");
+ assert.equal(run('data.draft.id'),draftId);
+ assert.equal(run('data.drafts.length'),1);
+ assert.equal(run('data.draft.rentalPeriodId'),null);
+}));
+test('Invalid independent property does nothing; move-in start remains direct',()=>withMoveOutScenario([],()=>{
+ run("startIndependentMoveOut('not-a-property')");
+ assert.equal(run('data.drafts.length'),0);
+ run("data.type='move-in';data.page='dashboard';render()");
+ click('new');
+ assert.equal(run('data.page'),'rooms');
+ assert.equal(run('data.draft.type'),'move-in');
+ assert.equal(run('data.draft.baselineId'),null);
+}));
+test('Both platforms include the new move-out choices',()=>{
+ for(const file of ['app/src/main/assets/app.js','docs/app.js']){
+  const source=fs.readFileSync(path.join(__dirname,file),'utf8');
+  assert.match(source,/function moveOutSelectionPage\(/);
+  assert.match(source,/function startIndependentMoveOut\(/);
+  assert.match(source,/case 'moveout-linked'/);
+  assert.match(source,/case 'moveout-independent'/);
+ }
+});
 (async()=>{
   try {
     run("startNew();data.selectedKey='Bedroom::Wardrobe';nav('condition')");
