@@ -153,3 +153,84 @@
 .confirm-mark{background:var(--palette-sand);border-color:var(--sand-border);color:var(--wine)}
 .record-preview{background:var(--sand-tint)}
 .hero-card:after{border-color:#e9ddc92b}
+
+/* Reference-screen colour organisation: colour properties only; unchanged layout/icons/controls. */
+:root{--wine:#8A1538;--wine-dark:#69102A;--wine-soft:#F3EAE1;--ink:#1F2430;--secondary:#505662;--muted:#69717C;--line:#D7C8BB;--card:#FFFFFF;--canvas:#F8F6F4;--sand:#E9DDC9;--sand-border:#C7B5A5;--sand-tint:#F4EEE6}
+body{background:#FFFFFF;color:var(--ink)}
+.app-frame,.app-surface,.page{background:var(--canvas);color:var(--ink)}
+.topbar{background:var(--canvas);border-bottom-color:var(--line)}
+.brandmark{background:var(--wine);color:#FFFFFF}
+.chip{background:var(--sand);color:var(--wine)}
+.eyebrow,.learn-more-link,.progress-label,.history-count,.preview-caption{color:var(--wine)}
+.field-label,.section-title small,.small-meta,.nav-sub,.subhead{color:var(--secondary)}
+.card,.room-card,.section-card,.review-room,.record-card,.draft-card,.history-property,.guide-step,.quick-link{background:var(--card);border-color:var(--line)}
+.card.soft{background:var(--sand-tint)}
+.input,.select,.textarea{background:#FFFFFF;color:var(--ink);border-color:var(--sand-border)}
+.property-primary-trigger,.property-primary-trigger[aria-expanded="true"]{background:#FFFFFF;color:var(--ink);border-color:var(--sand-border)}
+.property-primary-trigger[aria-expanded="true"]{border-color:var(--wine)}
+.property-address-bar{background:#FFFFFF;border-color:var(--sand-border)}
+.property-address-bar span{color:var(--secondary)}
+.property-list-panel,.property-list-panel>h3{background:#FFFFFF;color:var(--ink);border-color:var(--line)}
+.property-row.is-selected{background:var(--canvas)}
+.property-row{border-color:var(--line)}
+.property-small-action{background:#FFFFFF;border-color:var(--sand-border);color:var(--wine)}
+.property-manager-actions .outline-btn{background:#FFFFFF;border-color:var(--wine);color:var(--wine)}
+.property-choose:hover{background:var(--sand-tint)}
+.hero-card{background:var(--sand);color:var(--ink);box-shadow:0 15px 30px #8a15381a}
+.hero-card:after{border-color:#8a15380d}
+.hero-icon{background:var(--sand-tint);color:var(--wine)}
+.hero-top p{color:var(--secondary)}
+.choice{background:#FFFFFF;border-color:var(--sand-border);color:var(--ink)}
+.choice.selected{background:#FFFFFF;border-color:var(--wine);color:var(--wine)}
+.action-btn,.tab.active{background:var(--wine);color:#FFFFFF}
+.action-btn:hover:not(:disabled){background:var(--wine-dark)}
+.action-btn.light{background:var(--wine);color:#FFFFFF}
+.action-btn.light:hover:not(:disabled){background:var(--wine-dark)}
+.outline-btn,.secondary-btn,.property-form-actions .outline-btn{background:#FFFFFF;border-color:var(--wine);color:var(--wine)}
+.outline-btn:hover:not(:disabled),.secondary-btn:hover:not(:disabled){background:var(--sand-tint)}
+.quick-link .link-icon,.room-head .room-icon,.item-badge,.guide-number,.empty-icon{background:var(--sand);color:var(--wine)}
+.home-icon,.home-icon:hover{background:#FFFFFF;border-color:var(--wine);color:var(--wine)}
+.back-icon{background:#FFFFFF;border-color:var(--line);color:var(--ink)}
+.stepper:before{background:var(--sand-border)}
+.step .num{background:#FFFFFF;border-color:var(--sand-border);color:var(--ink)}
+.step.active .num{background:var(--wine);border-color:var(--wine);color:#FFFFFF}
+.step.done .num{background:var(--sand);border-color:var(--wine);color:var(--wine)}
+.room-head{background:#FFFFFF;color:var(--ink)}
+.item-line{color:var(--ink);border-bottom-color:var(--line)}
+.inline-form{background:var(--sand-tint);border-color:var(--sand-border)}
+.condition-choice{background:#FFFFFF;border-color:var(--sand-border);color:var(--ink)}
+.condition-choice.selected{background:var(--sand);border-color:var(--wine);color:var(--wine)}
+.photo-drop{background:#FFFFFF;border-color:var(--sand-border)}
+.photo-drop .photo-icon{background:var(--sand-tint);color:var(--wine)}
+.photo-drop .photo-hint{color:var(--secondary)}
+.pill:not(.success):not(.warning){background:var(--sand);color:var(--ink)}
+.progress-track{background:var(--sand)}
+.progress-bar{background:var(--wine)}
+.review-head{background:var(--sand);color:var(--ink)}
+.review-head .count{color:var(--wine)}
+.review-item{border-bottom-color:var(--line);color:var(--ink)}
+.sticky-foot{background:linear-gradient(#f8f6f4f2,#F8F6F4);border-top-color:var(--line)}
+.history-context,.history-summary,.baseline-card,.moveout-overview,.moveout-count{background:var(--sand);border-color:var(--sand-border)}
+.history-context{color:var(--wine)}
+.history-context strong,.history-summary,.baseline-card,.moveout-overview{color:var(--ink)}
+.moveout-prompt{background:var(--sand-tint);border-color:var(--sand-border)}
+.moveout-prompt p{color:var(--ink)}
+.moveout-progress{background:var(--sand-tint)}
+.moveout-progress>span{background:var(--wine)}
+.record-preview{background:var(--sand-tint)}
+.tab:not(.active){background:#FFFFFF;border-color:var(--sand-border);color:var(--ink)}
+.tab.active{border-color:var(--wine)}
+.compare-divider{color:var(--wine)}
+.compare-divider:before,.compare-divider:after{background:var(--sand-border)}
+.notice.neutral{background:var(--sand);border-color:var(--sand-border);color:var(--ink)}
+.notice.error{background:#FFF5F4;border-color:#E6B7BD;color:#7A1630}
+.notice.success{background:#EDF8F3;border-color:#CDE6DB;color:#205E49}
+.confirm-dialog,.property-modal{background:#FFFFFF;color:var(--ink)}
+.confirm-mark{background:var(--sand);border-color:var(--sand-border);color:var(--wine)}
+.property-modal h2{border-bottom-color:var(--sand)}
+.property-modal .input,.property-modal .select{background:#FFFFFF;border-color:var(--sand-border);color:var(--ink)}
+.property-modal .input:focus-visible,.property-modal .select:focus-visible{border-color:var(--wine);outline-color:var(--sand)}
+.property-form-footnote{color:var(--secondary)}
+.camera-dialog{background:var(--ink);color:#FFFFFF;border-color:#464951}
+.camera-eyebrow{color:var(--sand)}
+.camera-hint,.video-shutter-hint{color:var(--sand)}

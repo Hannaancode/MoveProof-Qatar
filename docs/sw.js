@@ -1,6 +1,6 @@
 /* Cache app code and icons, never users' inspection data or recorded videos. */
 'use strict';
-const CACHE='moveproof-ios-shell-2026-11-18-v10-sand';
+const CACHE='moveproof-ios-shell-2026-11-18-v11-reference-colours';
 const SHELL=['./','./index.html','./styles.css','./app.js','./pwa-media.js','./pwa-init.js','./manifest.webmanifest','./icon-192.png','./icon-512.png','./icon-180.png'];
 self.addEventListener('install',event=>{
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));

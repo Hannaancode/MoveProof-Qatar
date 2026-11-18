@@ -495,6 +495,38 @@ test('Sand surfaces retain readable text contrast',()=>{
   const contrast=(a,b)=>{const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
   for(const color of ['#8A1538','#1F2430','#434956'])assert.ok(contrast(color,'#E9DDC9')>=4.5);
 });
+
+test('All views share screenshot reference sand/maroon/white colour roles',()=>{
+ for(const file of ['app/src/main/assets/styles.css','docs/styles.css']){
+  const css=fs.readFileSync(path.join(__dirname,file),'utf8');
+  const marker='Reference-screen colour organisation';
+  assert.ok(css.includes(marker),file+' lacks screenshot colour theme');
+  const theme=css.slice(css.indexOf(marker));
+  for(const fragment of [
+   '--wine:#8A1538','--sand:#E9DDC9','--canvas:#F8F6F4',
+   '.app-frame,.app-surface,.page{background:var(--canvas)',
+   '.hero-card{background:var(--sand)',
+   '.property-address-bar{background:#FFFFFF',
+   '.review-head{background:var(--sand)',
+   '.condition-choice.selected{background:var(--sand)',
+   '.photo-drop{background:#FFFFFF',
+   '.history-context,.history-summary,.baseline-card,.moveout-overview,.moveout-count{background:var(--sand)',
+   '.action-btn,.tab.active{background:var(--wine)',
+   '.notice.neutral{background:var(--sand)',
+   '.notice.error{background:#FFF5F4',
+   '.notice.success{background:#EDF8F3',
+   '.confirm-dialog,.property-modal{background:#FFFFFF'
+  ])assert.ok(theme.includes(fragment),file+' missing '+fragment);
+ }
+});
+test('Original Android and iPhone screen logic stays present after colour-only update',()=>{
+ for(const file of ['app/src/main/assets/app.js','docs/app.js']){
+  const code=fs.readFileSync(path.join(__dirname,file),'utf8');
+  for(const name of ['dashboard','rooms','condition','review','draftsPage','recordsProperties','recordsItems','recordDetail','learnMore','completedPage']){
+    assert.ok(code.includes('function '+name+'('),file+' missing screen '+name);
+  }
+ }
+});
 (async()=>{
   try {
     run("startNew();data.selectedKey='Bedroom::Wardrobe';nav('condition')");
