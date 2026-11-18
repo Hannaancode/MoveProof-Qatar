@@ -476,6 +476,25 @@ test('Uppercase UI labels no longer use excessive letter spacing',()=>{
 });
 test('Static camera permission and gallery controls exist',()=>{const main=fs.readFileSync(path.join(__dirname,'app/src/main/java/qa/moveproof/inspection/MainActivity.java'),'utf8');assert.match(main,/RESOURCE_VIDEO_CAPTURE/);assert.match(main,/onShowFileChooser/);assert.match(main,/onRequestPermissionsResult/)});
 test('Android targets API 36 with CAMERA permission',()=>{assert.match(fs.readFileSync(path.join(__dirname,'app/build.gradle'),'utf8'),/targetSdk 36/);assert.match(fs.readFileSync(path.join(__dirname,'app/src/main/AndroidManifest.xml'),'utf8'),/android\.permission\.CAMERA/)});
+test('Qatar sand and maroon tokens and usage are consistent on Android and iOS',()=>{
+  for(const file of ['app/src/main/assets/styles.css','docs/styles.css']){
+    const css=fs.readFileSync(path.join(__dirname,file),'utf8');
+    assert.match(css,/--palette-sand:#E9DDC9/);
+    assert.match(css,/--palette-maroon:#8A1538/);
+    for(const selector of ['.property-primary-trigger','.property-address-bar','.property-list-panel>h3','.property-row.is-selected','.property-modal h2','.secondary-btn','.quick-link .link-icon','.tab:not(.active)','.notice.neutral','.confirm-mark']){
+      assert.ok(css.includes(selector),file+': missing '+selector);
+    }
+    assert.match(css,/\.property-address-bar\{background:var\(--palette-sand\)/);
+    assert.match(css,/\.property-manager-actions \.outline-btn\{background:var\(--palette-sand\)/);
+    assert.match(css,/\.action-btn\{color:#fff;background:var\(--wine\)/);
+  }
+});
+test('Sand surfaces retain readable text contrast',()=>{
+  const rgb=hex=>[1,3,5].map(i=>parseInt(hex.slice(i,i+2),16)/255).map(v=>v<=.04045?v/12.92:((v+.055)/1.055)**2.4);
+  const lum=hex=>rgb(hex).reduce((s,v,i)=>s+v*[.2126,.7152,.0722][i],0);
+  const contrast=(a,b)=>{const x=lum(a),y=lum(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05)};
+  for(const color of ['#8A1538','#1F2430','#434956'])assert.ok(contrast(color,'#E9DDC9')>=4.5);
+});
 (async()=>{
   try {
     run("startNew();data.selectedKey='Bedroom::Wardrobe';nav('condition')");
