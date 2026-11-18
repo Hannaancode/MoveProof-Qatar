@@ -216,6 +216,74 @@ function withHistory(records, fn){
 }
 const makeRecord=(id,propertyId,items,type='move-in')=>({id,propertyId,type,date:'2026-11-01T12:00:00Z',demo:false,items});
 const makeItem=(key,condition='Good')=>({key,condition,photo:null,description:'Test condition'});
+
+test('Previous Records list has no bulk delete while property history has a delete control',()=>withHistory([
+ makeRecord('history-1','al-sadd',[makeItem('Bedroom::Wardrobe')])
+],()=>{
+ run("nav('record-properties')");
+ assert.doesNotMatch(el('app').innerHTML,/data-a="toggle-inspection-delete"/);
+ run("data.recordsProperty='al-sadd';nav('record-items')");
+ assert.match(el('app').innerHTML,/data-a="toggle-inspection-delete"/);
+ assert.doesNotMatch(el('app').innerHTML,/data-a="delete-inspection"/);
+}));
+test('One inspection offers direct confirmation, Cancel protects the record',()=>withHistory([
+ makeRecord('one-only','al-sadd',[makeItem('Bedroom::Wardrobe')])
+],()=>{
+ run("data.recordsProperty='al-sadd';nav('record-items')");
+ run("requestInspectionDeletion('one-only')");
+ assert.equal(el('confirm-dialog').open,true);
+ assert.match(el('confirm-title').textContent,/Delete this inspection/);
+ assert.match(el('confirm-description').textContent,/Are you sure/);
+ assert.match(el('confirm-description').textContent,/all 1 recorded item/);
+ el('confirm-cancel').handlers.click();
+ assert.equal(run("data.records.filter(r=>r.id==='one-only').length"),1);
+}));
+test('Deleting one chosen inspection preserves other inspection records and local persistence',()=>withHistory([
+ makeRecord('chosen','al-sadd',[makeItem('Bedroom::Wardrobe')]),
+ makeRecord('retained','al-sadd',[makeItem('Bedroom::Door')],'move-out'),
+ makeRecord('neighbor','west-bay',[makeItem('Living Room::Wall')])
+],()=>{
+ run("data.recordsProperty='al-sadd';data.recordsDeleteOpen=true;nav('record-items')");
+ assert.match(el('app').innerHTML,/data-a="delete-inspection" data-v="chosen"/);
+ assert.match(el('app').innerHTML,/data-a="delete-inspection" data-v="retained"/);
+ run("requestInspectionDeletion('chosen')");
+ el('confirm-accept').handlers.click();
+ assert.equal(run("data.records.some(r=>r.id==='chosen')"),false);
+ assert.equal(run("data.records.some(r=>r.id==='retained')"),true);
+ assert.equal(run("data.records.some(r=>r.id==='neighbor')"),true);
+ assert.equal(run('data.page'),'record-items');
+ assert.match(storage.get('moveproof-qatar-prototype-v1'),/retained/);
+ assert.doesNotMatch(storage.get('moveproof-qatar-prototype-v1'),/"id":"chosen"/);
+}));
+test('Deleting the last inspection removes the property from history but not properties',()=>withHistory([
+ makeRecord('last','al-sadd',[makeItem('Bedroom::Wardrobe')])
+],()=>{
+ run("data.recordsProperty='al-sadd';nav('record-items')");
+ run("requestInspectionDeletion('last')");
+ el('confirm-accept').handlers.click();
+ assert.equal(run('data.page'),'record-properties');
+ assert.match(el('app').innerHTML,/No saved inspections yet/);
+ assert.equal(run("data.properties.some(p=>p.id==='al-sadd')"),true);
+}));
+test('Inspection deletion is always scoped to the opened property',()=>withHistory([
+ makeRecord('foreign','west-bay',[makeItem('Bedroom::Wardrobe')])
+],()=>{
+ run("data.recordsProperty='al-sadd';nav('record-items')");
+ run("requestInspectionDeletion('foreign')");
+ assert.equal(el('confirm-dialog').open,false);
+ assert.equal(run("data.records.some(r=>r.id==='foreign')"),true);
+}));
+test('iPhone PWA assets are versioned to bypass an old cached colour sheet',()=>{
+ const html=fs.readFileSync(path.join(__dirname,'docs/index.html'),'utf8');
+ const sw=fs.readFileSync(path.join(__dirname,'docs/sw.js'),'utf8');
+ const init=fs.readFileSync(path.join(__dirname,'docs/pwa-init.js'),'utf8');
+ assert.match(html,/styles\.css\?v=mp-20261118-history-delete-v1/);
+ assert.match(html,/app\.js\?v=mp-20261118-history-delete-v1/);
+ assert.match(sw,/moveproof-ios-shell-2026-11-18-v12-history-delete/);
+ assert.match(sw,/styles\.css\?v=mp-20261118-history-delete-v1/);
+ assert.match(init,/updateViaCache:'none'/);
+});
+
 test('Previous Records shows a helpful empty state when no inspections are saved',()=>withHistory([],()=>{
  run("nav('record-properties')");const html=el('app').innerHTML;
  assert.match(html,/No saved inspections yet/);

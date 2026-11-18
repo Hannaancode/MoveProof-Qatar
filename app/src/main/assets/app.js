@@ -52,11 +52,11 @@ const propAddress=x=>{const p=propertyById(x);if(!p)return '';return [p.zone&&`Z
 const stored=(()=>{try{return JSON.parse(localStorage.getItem(STORE)||'null');}catch{return null}})();
 const storedDrafts=(Array.isArray(stored?.drafts)?stored.drafts:(stored?.draft?[stored.draft]:[])).filter(d=>d&&typeof d==='object'&&d.id&&Array.isArray(d.selected)&&d.details);
 const activeDraft=storedDrafts.find(d=>d.id===stored?.activeDraftId)||(stored?.draft?storedDrafts[0]:null);
-const data={properties:Array.isArray(stored?.properties)&&stored.properties.some(p=>p&&p.id)?stored.properties.filter(p=>p&&p.id):structuredClone(DEFAULT_PROPERTIES),showPropertyForm:false,editingPropertyId:null,deletePropertyMode:false,propertyMenuOpen:false,records:Array.isArray(stored?.records)?stored.records.filter(isRealRecord):[],drafts:storedDrafts,draft:activeDraft,propertyId:stored?.propertyId||'al-sadd',type:stored?.type||'move-in',page:'dashboard',openedRoom:'Bedroom',customFormRoom:null,selectedKey:null,returnReview:false,photoError:'',skipPhoto:false,recordsProperty:stored?.propertyId||'al-sadd',recordsItem:'Bedroom::Wardrobe',recordsRoom:'',lastFinishedId:null,toastTimer:null,cameraStream:null};
+const data={properties:Array.isArray(stored?.properties)&&stored.properties.some(p=>p&&p.id)?stored.properties.filter(p=>p&&p.id):structuredClone(DEFAULT_PROPERTIES),showPropertyForm:false,editingPropertyId:null,deletePropertyMode:false,propertyMenuOpen:false,records:Array.isArray(stored?.records)?stored.records.filter(isRealRecord):[],drafts:storedDrafts,draft:activeDraft,propertyId:stored?.propertyId||'al-sadd',type:stored?.type||'move-in',page:'dashboard',openedRoom:'Bedroom',customFormRoom:null,selectedKey:null,returnReview:false,photoError:'',skipPhoto:false,recordsProperty:stored?.propertyId||'al-sadd',recordsItem:'Bedroom::Wardrobe',recordsRoom:'',recordsDeleteOpen:false,lastFinishedId:null,toastTimer:null,cameraStream:null};
 const app=document.getElementById('app');const dlg=document.getElementById('camera-dialog');const video=document.getElementById('camera-video');const gallery=document.getElementById('gallery-input');
 function persist(){try{if(data.draft)data.draft.updatedAt=new Date().toISOString();localStorage.setItem(STORE,JSON.stringify({properties:data.properties,records:data.records,drafts:data.drafts,activeDraftId:data.draft?.id||null,propertyId:data.propertyId,type:data.type}));return true}catch(err){toast('Storage limit reached. Photos may not survive a refresh; try fewer or smaller pictures.');return false}}
 function toast(message){const t=document.getElementById('toast');t.textContent=message;t.classList.add('show');clearTimeout(data.toastTimer);data.toastTimer=setTimeout(()=>t.classList.remove('show'),4000)}
-function nav(page){if(page==='dashboard'&&data.draft)persist();if(page!=='dashboard'){data.propertyMenuOpen=false;data.deletePropertyMode=false}stopCamera();data.page=page;data.photoError='';render();window.scrollTo(0,0)}
+function nav(page){if(page==='dashboard'&&data.draft)persist();if(page!=='dashboard'){data.propertyMenuOpen=false;data.deletePropertyMode=false}if(page!=='record-items')data.recordsDeleteOpen=falsestopCamera();data.page=page;data.photoError='';render();window.scrollTo(0,0)}
 function header(){return `<header class="topbar"><div class="brand"><div class="brandmark">${ico('home',22)}</div><div class="brandname">MoveProof <span style="font-weight:500">Qatar</span></div></div><span class="chip">OFFLINE</span></header>`}
 function navhead(title,sub,back='dashboard'){return `<div class="nav-header"><button type="button" class="back-icon" data-a="nav" data-v="${back}" aria-label="Back to previous screen">${ico('arrow',20)}</button><div class="nav-copy"><h1 class="nav-title">${escapeHtml(title)}</h1>${sub?`<div class="nav-sub">${escapeHtml(sub)}</div>`:''}</div><button type="button" class="home-icon" data-a="nav" data-v="dashboard" aria-label="Go directly to main menu" title="Main menu">${ico('home',20)}</button></div>`}
 function stepper(active){const names=['Type','Rooms & Items','Inspect','Review'];return `<div class="stepper" aria-label="Inspection progress">${names.map((n,i)=>`<div class="step ${active===i+1?'active':active>i+1?'done':''}" ${active===i+1?'aria-current="step"':''}><div class="num">${active>i+1?ico('check',15):i+1}</div><span>${n}</span></div>`).join('')}</div>`}
@@ -155,7 +155,7 @@ function requestDeletion(request,title,message){
  pendingDeletion=request;
  document.getElementById('confirm-title').textContent=title;
  document.getElementById('confirm-description').textContent=message;
- document.getElementById('confirm-accept').textContent=request.kind==='draft'?'Delete draft':request.kind==='property'?'Delete Property':'Delete record';
+ document.getElementById('confirm-accept').textContent=request.kind==='draft'?'Delete draft':request.kind==='property'?'Delete Property':request.kind==='inspection'?'Delete inspection':'Delete record';
  confirmDialog.showModal();
  document.getElementById('confirm-cancel').focus();
 }
@@ -199,6 +199,17 @@ function executeDeletion(){
    data.properties=oldProperties;data.propertyId=oldPropertyId;data.recordsProperty=oldRecordsProperty;return;
   }
   data.deletePropertyMode=false;render();toast('Property deleted');
+ }else if(request.kind==='inspection'){
+  const rec=data.records.find(r=>r.id===request.id&&r.propertyId===data.recordsProperty);
+  if(!rec)return;
+  const oldRecords=data.records,oldFinished=data.lastFinishedId;
+  data.records=data.records.filter(r=>r.id!==request.id);
+  if(data.lastFinishedId===request.id)data.lastFinishedId=null;
+  if(!persist()){data.records=oldRecords;data.lastFinishedId=oldFinished;return}
+  data.recordsDeleteOpen=false;
+  if(!savedRecordsForProperty(rec.propertyId).length)nav('record-properties');
+  else nav('record-items');
+  toast('Inspection deleted. Other inspections were kept.');
  }else if(request.kind==='record'){
   const idx=data.records.findIndex(r=>r.id===request.id);
   if(idx<0)return;
@@ -303,6 +314,27 @@ function recordsProperties(){
  ${properties.length?`<div class="history-property-list">${properties.map(({property:p,records,state})=>`<button class="history-property" type="button" data-a="choose-record-property" data-v="${escapeHtml(p.id)}"><span class="item-badge">${ico('home',22)}</span><span class="grow"><strong>${escapeHtml(p.name)}</strong><small>${escapeHtml(propAddress(p.id)||'No address added')}</small><span class="history-count">${records.length} saved inspection${records.length===1?'':'s'}</span>${state.baseline?`<span class="history-progress ${state.missing.length?'needs-action':'is-complete'}">${state.missing.length?`${state.missing.length} item${state.missing.length===1?'':'s'} awaiting move-out`:'Move-out documented for all move-in items'}</span>`:''}</span>${ico('chevron',20)}</button>`).join('')}</div>`:`<div class="card empty" role="status"><div class="empty-icon">${ico('folder',32)}</div><h3>No saved inspections yet</h3><p>Complete an inspection to see its property and recorded items here. Drafts do not appear in Previous records.</p><button type="button" class="outline-btn" data-a="nav" data-v="dashboard">${ico('arrow',16)} Back to dashboard</button></div>`}
  <p class="footer-note">Move-out progress is based on the latest saved move-in inspection for each property. Older unlinked move-outs are not automatically counted.</p></div>`;
 }
+
+function inspectionDeletionPanel(records){
+ if(!records.length)return '';
+ const content = data.recordsDeleteOpen
+  ? '<div id="inspection-delete-options" class="inspection-delete-options"><p class="small-meta">Choose one saved inspection to delete. Other inspections will remain.</p>'
+   +records.slice().sort((a,b)=>new Date(b.date)-new Date(a.date)).map(r=>{
+     const count=savedItemsInRecord(r).length;
+     return '<button type="button" class="inspection-delete-choice" data-a="delete-inspection" data-v="'+escapeHtml(r.id)+'" aria-label="Delete '+(r.type==='move-in'?'move-in':'move-out')+' inspection dated '+escapeHtml(fmtDate(r.date))+'"><span class="grow"><strong>'+(r.type==='move-in'?'Move-in':'Move-out')+' inspection</strong><small>'+escapeHtml(fmtDate(r.date))+' · '+count+' item'+(count===1?'':'s')+'</small></span>'+ico('trash',17)+'</button>';
+   }).join('')+'</div>'
+  :'';
+ return '<section class="inspection-delete-panel"><button type="button" class="outline-btn full inspection-delete-toggle" data-a="toggle-inspection-delete" aria-expanded="'+!!data.recordsDeleteOpen+'"'+(records.length>1?' aria-controls="inspection-delete-options"':'')+'>'+ico('trash',17)+' Delete inspection'+(records.length===1?'':'s')+'</button>'+content+'</section>';
+}
+function requestInspectionDeletion(recordId){
+ const rec=data.records.find(r=>r.id===recordId&&r.propertyId===data.recordsProperty&&savedItemsInRecord(r).length>0);
+ if(!rec)return;
+ const count=savedItemsInRecord(rec).length;
+ const dependencies=rec.type==='move-in'&&data.records.some(r=>r.type==='move-out'&&r.propertyId===rec.propertyId&&r.baselineId===rec.id);
+ const message='Are you sure you want to delete the '+(rec.type==='move-in'?'move-in':'move-out')+' inspection for '+propName(rec.propertyId)+', dated '+fmtDate(rec.date)+'? This removes all '+count+' recorded item'+(count===1?'':'s')+' and photos in that inspection. Other inspections remain; Gallery video files are not deleted.'+(dependencies?' Related move-out comparisons may no longer be available.':'')+' This cannot be undone.';
+ requestDeletion({kind:'inspection',id:rec.id},'Delete this inspection?',message);
+}
+
 function recordsItems(){
  const property=data.recordsProperty;
  const records=savedRecordsForProperty(property);
@@ -312,6 +344,7 @@ function recordsItems(){
  return `${header()}<div class="page">${navhead('Rooms & items',propName(property),'record-properties')}<div class="eyebrow">Inspection history</div><h2 class="flow-title">Choose a room and item</h2><p class="subhead">Open a room to view its saved items. You can see missing move-out documentation without opening each record.</p><div class="history-context">${ico('home',17)}<div><strong>${escapeHtml(propName(property))}</strong><small>${escapeHtml(propAddress(property)||'No address added')}</small></div></div>
  ${state.baseline?`<section class="moveout-overview"><div class="moveout-top"><div><strong>Move-out checklist</strong><small>Based on move-in · ${escapeHtml(fmtDate(state.baseline.date))}</small></div><span class="moveout-count">${state.done.length}/${state.keys.length}</span></div><div class="moveout-progress"><span style="width:${Math.round(state.done.length/Math.max(1,state.keys.length)*100)}%"></span></div><p>${state.missing.length?`${state.missing.length} item${state.missing.length===1?'':'s'} still ${state.missing.length===1?'needs':'need'} a move-out inspection.`:'All items from this move-in inspection have a matching move-out record.'}</p>${state.missing.length?`<button type="button" class="action-btn full" data-a="record-moveout-all">${ico('clipboard',17)} Document remaining ${state.missing.length} item${state.missing.length===1?'':'s'}</button>`:''}</section>`:''}
  ${roomNames.length?roomNames.map(room=>{const opened=data.recordsRoom===room;const roomKeys=keys.filter(key=>parseKey(key).room===room);const roomInfo=ROOMS.find(entry=>entry.name===room);const pendingCount=roomKeys.filter(k=>state.missing.includes(k)).length;return `<section class="room-card history-room"><button type="button" class="room-head" data-a="toggle-record-room" data-v="${escapeHtml(room)}" aria-expanded="${opened}"><span class="room-icon">${ico(roomInfo?.icon||'folder',19)}</span><strong>${escapeHtml(room)}</strong><small>${pendingCount?`${pendingCount} awaiting move-out`:`${roomKeys.length} recorded`}</small>${ico(opened?'up':'down',17)}</button>${opened?`<div class="history-item-list">${roomKeys.map(key=>{const name=parseKey(key).name;const count=records.filter(record=>savedItemsInRecord(record).some(item=>item.key===key)).length;const status=state.missing.includes(key)?'Move-out needed':state.done.includes(key)?'Both recorded':'Saved record';return `<button type="button" class="history-item" data-a="choose-record-item" data-v="${escapeHtml(key)}"><span>${escapeHtml(name)}</span><small>${status} · ${count} record${count===1?'':'s'}</small>${ico('chevron',16)}</button>`}).join('')}</div>`:''}</section>`}).join(''):`<div class="card empty" role="status"><div class="empty-icon">${ico('folder',32)}</div><h3>No recorded items available</h3><p>This property does not have any completed inspections with recorded conditions.</p></div>`}
+ ${inspectionDeletionPanel(records)}
  <button type="button" class="outline-btn full" style="margin-top:18px" data-a="nav" data-v="record-properties">${ico('arrow',17)} All properties</button></div>`;
 }
 function recordDetail(){
@@ -475,7 +508,9 @@ case 'records':data.recordsProperty=data.propertyId;data.recordsRoom='';nav('rec
  case 'record-moveout-one':startMoveOutFromHistory(data.recordsProperty,[v]);break;
  case 'view-completed-record':{const rec=data.records.find(r=>r.id===data.lastFinishedId);if(rec?.items?.length){data.recordsProperty=rec.propertyId;data.recordsItem=rec.items[0].key;data.recordsRoom=parseKey(data.recordsItem).room;nav('record-detail')}else nav('record-properties');break}
 case 'last':{const last=lastRecord();if(last?.items?.length){data.recordsProperty=last.propertyId;data.recordsItem=last.items[0].key;data.recordsRoom=parseKey(data.recordsItem).room;nav('record-detail')}else nav('record-properties');break}
-case 'choose-record-property':data.recordsProperty=v;data.recordsRoom='';nav('record-items');break;
+case 'choose-record-property':data.recordsProperty=v;data.recordsRoom='';data.recordsDeleteOpen=false;nav('record-items');break;
+case 'toggle-inspection-delete':{const records=savedRecordsForProperty(data.recordsProperty);if(records.length===1)requestInspectionDeletion(records[0].id);else{data.recordsDeleteOpen=!data.recordsDeleteOpen;render()}break}
+case 'delete-inspection':requestInspectionDeletion(v);break;
 case 'toggle-record-room':data.recordsRoom=data.recordsRoom===v?'':v;render();break;
 case 'choose-record-item':data.recordsItem=v;nav('record-detail');break;
 case 'toggle-room':data.openedRoom=data.openedRoom===v?'':v;data.customFormRoom=null;render();break;

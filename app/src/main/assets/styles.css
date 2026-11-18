@@ -234,3 +234,17 @@ body{background:#FFFFFF;color:var(--ink)}
 .camera-dialog{background:var(--ink);color:#FFFFFF;border-color:#464951}
 .camera-eyebrow{color:var(--sand)}
 .camera-hint,.video-shutter-hint{color:var(--sand)}
+
+/* Inspection-history actions and card alignment — no change to other screen layout. */
+.history-property>.grow{flex:1 1 0%;width:0;min-width:0;display:flex;flex-direction:column;align-items:flex-start}
+.history-property>.icon:last-child{flex:none;margin-left:auto;align-self:center}
+.inspection-delete-panel{margin-top:18px}
+.inspection-delete-toggle{border-color:var(--wine);color:var(--wine);background:#FFFFFF}
+.inspection-delete-options{margin-top:10px;border:1px solid var(--line);border-radius:14px;background:var(--card);padding:10px}
+.inspection-delete-options>.small-meta{margin:3px 5px 10px}
+.inspection-delete-choice{display:flex;align-items:center;gap:12px;width:100%;min-height:62px;padding:11px 12px;text-align:left;border:1px solid var(--line);border-radius:11px;background:#FFFFFF;color:var(--ink);margin-top:8px}
+.inspection-delete-choice>.icon{color:var(--wine)}
+.inspection-delete-choice strong{display:block;font-size:13px}
+.inspection-delete-choice small{display:block;color:var(--secondary);font-size:11px;margin-top:4px}
+.inspection-delete-choice:focus-visible{outline:2px solid var(--wine);outline-offset:2px}
+.inspection-delete-choice:hover{background:var(--sand-tint)}
