@@ -91,11 +91,15 @@
 :root{--palette-maroon:#8A1538;--palette-sand:#E9DDC9;--palette-off-white:#F8F6F4;--palette-white:#FFFFFF;--palette-dark:#1F2430;--legacy-wine:#75254c;--legacy-wine-dark:#51162f;--legacy-ink:#232832;--wine:var(--palette-maroon);--wine-dark:#68102a;--wine-soft:#faedf1;--ink:var(--palette-dark);--canvas:var(--palette-off-white);--sand:var(--palette-sand);--card:var(--palette-white)}
 /* Property selection and management. */
 .property-manager{margin-top:22px;margin-bottom:24px}
-.property-primary-select{width:100%;height:54px;padding:12px 36px 12px 15px;border-radius:14px;border:1px solid #d7c8be;background-color:#fff;font-size:14px;font-weight:650;color:var(--ink)}
+.property-primary-trigger{width:100%;min-height:54px;padding:12px 15px;border-radius:14px;border:1px solid #d7c8be;background:#fff;font-size:14px;font-weight:650;color:var(--ink);display:flex;align-items:center;justify-content:space-between;gap:12px;text-align:left;cursor:pointer;box-shadow:0 2px 4px #1f243008}
+.property-primary-trigger>span:first-child{flex:1;min-width:0;overflow-wrap:anywhere}
+.property-primary-trigger>.icon{flex:none;color:#69717a;transition:transform .15s ease}
+.property-primary-trigger[aria-expanded="true"]{border-color:var(--wine);border-bottom-left-radius:11px;border-bottom-right-radius:11px}
+.property-primary-trigger:focus-visible{outline:3px solid #8a153855;outline-offset:2px}
 .property-address-bar{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;border:1px solid #d7c8be;border-radius:14px;background:#fff;margin-top:12px;padding:12px 11px}
 .property-address-bar>div{display:grid;gap:5px;min-width:0}
 .property-address-bar strong{font-size:11px;color:var(--ink)}.property-address-bar span{font-size:11px;line-height:1.3;color:var(--secondary);overflow-wrap:anywhere}
-.property-list-panel{border:1px solid var(--wine);border-radius:15px;background:#fff;margin-top:9px;padding:16px 12px 13px}
+.property-list-panel{border:1px solid var(--wine);border-radius:15px;background:#fff;margin-top:9px;padding:16px 12px 13px;box-shadow:0 8px 28px #1f24300c}
 .property-list-panel>h3{margin:0;padding:0 5px 12px;border-bottom:1px solid #e7dad3;font-size:12px;font-weight:800;letter-spacing:.8px;color:#525563}
 .property-list{display:grid}
 .property-row{display:flex;gap:8px;align-items:center;min-height:63px;border-bottom:1px solid #eae0dc}

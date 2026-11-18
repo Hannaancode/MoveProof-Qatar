@@ -29,13 +29,45 @@ test('Custom apartment is available in selector and saved locally',()=>{
  assert.match(storage.get('moveproof-qatar-prototype-v1'),/tester-villa/);
  run("data.propertyId='al-sadd';data.showPropertyForm=false;render()");
 });
-test('Property manager displays address, list, edit and delete-mode controls',()=>{
- run("data.page='dashboard';data.showPropertyForm=false;data.deletePropertyMode=false;render()");
+test('Property picker defaults to collapsed with the address summary visible',()=>{
+ run("data.page='dashboard';data.showPropertyForm=false;data.deletePropertyMode=false;data.propertyMenuOpen=false;render()");
  const html=el('app').innerHTML;
- for(const name of ['House No.','Street','Zone','APARTMENTS &amp; VILLAS'])assert.match(html,new RegExp(name.replace('.','\\.')));
+ for(const name of ['House No.','Street','Zone'])assert.match(html,new RegExp(name.replace('.','\\.')));
+ assert.match(html,/data-a="toggle-property-menu"/);
+ assert.match(html,/aria-expanded="false"/);
+ assert.doesNotMatch(html,/APARTMENTS &amp; VILLAS|data-a="select-property"|data-a="edit-property"|data-a="toggle-delete-property-mode"/);
+});
+test('Opening selected property expands the full management panel',()=>{
+ run("data.propertyMenuOpen=true;render()");
+ const html=el('app').innerHTML;
+ assert.match(html,/aria-expanded="true"/);
+ assert.match(html,/id="property-options"/);
+ assert.match(html,/APARTMENTS &amp; VILLAS/);
  assert.match(html,/data-a="select-property"/);
  assert.match(html,/data-a="edit-property"/);
  assert.match(html,/data-a="toggle-delete-property-mode"/);
+});
+test('Selecting a property closes the dropdown and updates the address bar',()=>{
+ run("data.propertyId='west-bay';data.propertyMenuOpen=true;data.deletePropertyMode=true;render()");
+ el('app').handlers.click({target:{closest(){return {dataset:{a:'select-property',v:'tester-villa'}}}}});
+ const html=el('app').innerHTML;
+ assert.equal(run('data.propertyId'),'tester-villa');
+ assert.equal(run('data.propertyMenuOpen'),false);
+ assert.equal(run('data.deletePropertyMode'),false);
+ assert.match(html,/id="selected-property-name">Tester villa/);
+ assert.match(html,/<strong>Zone<\/strong><span>56<\/span>/);
+ assert.doesNotMatch(html,/APARTMENTS &amp; VILLAS/);
+ run("data.propertyId='al-sadd';data.propertyMenuOpen=false;render()");
+});
+test('Clicking property selector opens and closes dropdown; delete mode resets on close',()=>{
+ run("data.page='dashboard';data.propertyMenuOpen=false;data.deletePropertyMode=false;render()");
+ const trigger=()=>el('app').handlers.click({target:{closest(){return {dataset:{a:'toggle-property-menu',v:''}}}}});
+ trigger();assert.equal(run('data.propertyMenuOpen'),true);
+ assert.match(el('app').innerHTML,/APARTMENTS &amp; VILLAS/);
+ run('data.deletePropertyMode=true');trigger();
+ assert.equal(run('data.propertyMenuOpen'),false);
+ assert.equal(run('data.deletePropertyMode'),false);
+ assert.doesNotMatch(el('app').innerHTML,/data-a="delete-property"/);
 });
 test('Property address form displays new modal and prefilled edit values',()=>{
  run("openPropertyForm('al-sadd')");

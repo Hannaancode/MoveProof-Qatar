@@ -52,11 +52,11 @@ const propAddress=x=>{const p=propertyById(x);if(!p)return '';return [p.zone&&`Z
 const stored=(()=>{try{return JSON.parse(localStorage.getItem(STORE)||'null');}catch{return null}})();
 const storedDrafts=(Array.isArray(stored?.drafts)?stored.drafts:(stored?.draft?[stored.draft]:[])).filter(d=>d&&typeof d==='object'&&d.id&&Array.isArray(d.selected)&&d.details);
 const activeDraft=storedDrafts.find(d=>d.id===stored?.activeDraftId)||(stored?.draft?storedDrafts[0]:null);
-const data={properties:Array.isArray(stored?.properties)&&stored.properties.some(p=>p&&p.id)?stored.properties.filter(p=>p&&p.id):structuredClone(DEFAULT_PROPERTIES),showPropertyForm:false,editingPropertyId:null,deletePropertyMode:false,records:Array.isArray(stored?.records)?stored.records.filter(isRealRecord):[],drafts:storedDrafts,draft:activeDraft,propertyId:stored?.propertyId||'al-sadd',type:stored?.type||'move-in',page:'dashboard',openedRoom:'Bedroom',customFormRoom:null,selectedKey:null,returnReview:false,photoError:'',skipPhoto:false,recordsProperty:stored?.propertyId||'al-sadd',recordsItem:'Bedroom::Wardrobe',recordsRoom:'',lastFinishedId:null,toastTimer:null,cameraStream:null};
+const data={properties:Array.isArray(stored?.properties)&&stored.properties.some(p=>p&&p.id)?stored.properties.filter(p=>p&&p.id):structuredClone(DEFAULT_PROPERTIES),showPropertyForm:false,editingPropertyId:null,deletePropertyMode:false,propertyMenuOpen:false,records:Array.isArray(stored?.records)?stored.records.filter(isRealRecord):[],drafts:storedDrafts,draft:activeDraft,propertyId:stored?.propertyId||'al-sadd',type:stored?.type||'move-in',page:'dashboard',openedRoom:'Bedroom',customFormRoom:null,selectedKey:null,returnReview:false,photoError:'',skipPhoto:false,recordsProperty:stored?.propertyId||'al-sadd',recordsItem:'Bedroom::Wardrobe',recordsRoom:'',lastFinishedId:null,toastTimer:null,cameraStream:null};
 const app=document.getElementById('app');const dlg=document.getElementById('camera-dialog');const video=document.getElementById('camera-video');const gallery=document.getElementById('gallery-input');
 function persist(){try{if(data.draft)data.draft.updatedAt=new Date().toISOString();localStorage.setItem(STORE,JSON.stringify({properties:data.properties,records:data.records,drafts:data.drafts,activeDraftId:data.draft?.id||null,propertyId:data.propertyId,type:data.type}));return true}catch(err){toast('Storage limit reached. Photos may not survive a refresh; try fewer or smaller pictures.');return false}}
 function toast(message){const t=document.getElementById('toast');t.textContent=message;t.classList.add('show');clearTimeout(data.toastTimer);data.toastTimer=setTimeout(()=>t.classList.remove('show'),4000)}
-function nav(page){if(page==='dashboard'&&data.draft)persist();stopCamera();data.page=page;data.photoError='';render();window.scrollTo(0,0)}
+function nav(page){if(page==='dashboard'&&data.draft)persist();if(page!=='dashboard'){data.propertyMenuOpen=false;data.deletePropertyMode=false}stopCamera();data.page=page;data.photoError='';render();window.scrollTo(0,0)}
 function header(){return `<header class="topbar"><div class="brand"><div class="brandmark">${ico('home',22)}</div><div class="brandname">MoveProof <span style="font-weight:500">Qatar</span></div></div><span class="chip">OFFLINE</span></header>`}
 function navhead(title,sub,back='dashboard'){return `<div class="nav-header"><button type="button" class="back-icon" data-a="nav" data-v="${back}" aria-label="Back to previous screen">${ico('arrow',20)}</button><div class="nav-copy"><h1 class="nav-title">${escapeHtml(title)}</h1>${sub?`<div class="nav-sub">${escapeHtml(sub)}</div>`:''}</div><button type="button" class="home-icon" data-a="nav" data-v="dashboard" aria-label="Go directly to main menu" title="Main menu">${ico('home',20)}</button></div>`}
 function stepper(active){const names=['Type','Rooms & Items','Inspect','Review'];return `<div class="stepper" aria-label="Inspection progress">${names.map((n,i)=>`<div class="step ${active===i+1?'active':active>i+1?'done':''}" ${active===i+1?'aria-current="step"':''}><div class="num">${active>i+1?ico('check',15):i+1}</div><span>${n}</span></div>`).join('')}</div>`}
@@ -78,12 +78,12 @@ function propertyForm(){
 function propertyManager(){
  const selected=propertyById(data.propertyId);
  const address=[['House No.',selected?.building],['Street',selected?.street],['Zone',selected?.zone]];
- return `<section class="property-box property-manager" aria-label="Manage properties"><label class="field-label" for="main-property">Selected property</label>
- <select id="main-property" class="select property-primary-select" data-field="property">${data.properties.map(p=>`<option value="${escapeHtml(p.id)}" ${p.id===data.propertyId?'selected':''}>${escapeHtml(p.name)}</option>`).join('')}</select>
- <div class="property-address-bar">${address.map(([label,val])=>`<div><strong>${label}</strong><span>${escapeHtml(val||'Not entered')}</span></div>`).join('')}</div>
- <section class="property-list-panel"><h3>APARTMENTS &amp; VILLAS</h3><div class="property-list" role="radiogroup" aria-label="Choose property">
+ return `<section class="property-box property-manager" aria-label="Manage properties"><span class="field-label" id="selected-property-label">Selected property</span>
+ <button id="main-property" type="button" class="property-primary-trigger" data-a="toggle-property-menu" aria-controls="property-options" aria-expanded="${data.propertyMenuOpen}" aria-labelledby="selected-property-label selected-property-name"><span id="selected-property-name">${escapeHtml(selected?.name||'Select property')}</span>${ico(data.propertyMenuOpen?'up':'down',19)}</button>
+ ${data.propertyMenuOpen?`<section id="property-options" class="property-list-panel" aria-label="Apartments and villas"><h3>APARTMENTS &amp; VILLAS</h3><div class="property-list" role="radiogroup" aria-label="Choose property">
  ${data.properties.map(p=>`<div class="property-row ${p.id===data.propertyId?'is-selected':''}"><button type="button" class="property-choose" data-a="select-property" data-v="${escapeHtml(p.id)}" role="radio" aria-checked="${p.id===data.propertyId}" aria-label="Select ${escapeHtml(p.name)}"><span class="property-radio" aria-hidden="true"></span><span class="property-identity"><strong>${escapeHtml(p.name)}</strong><small>${escapeHtml(p.type)}</small></span></button>${data.deletePropertyMode?`<button type="button" class="property-small-action property-delete" data-a="delete-property" data-v="${escapeHtml(p.id)}" aria-label="Delete ${escapeHtml(p.name)}">${ico('trash',19)}</button>`:`<button type="button" class="property-small-action property-edit" data-a="edit-property" data-v="${escapeHtml(p.id)}" aria-label="Edit ${escapeHtml(p.name)}">${ico('edit',18)}</button>`}</div>`).join('')}
- </div><div class="property-manager-actions">${data.deletePropertyMode?`<button type="button" class="outline-btn" data-a="toggle-delete-property-mode">Exit Delete Mode</button>`:`<button type="button" class="outline-btn" data-a="add-property">${ico('plus',16)} Add Property</button><button type="button" class="action-btn" data-a="toggle-delete-property-mode">Delete Property</button>`}</div>${data.deletePropertyMode?`<p class="property-delete-hint">Choose the delete icon beside a property, or exit deletion mode.</p>`:''}</section></section>`;
+ </div><div class="property-manager-actions">${data.deletePropertyMode?`<button type="button" class="outline-btn" data-a="toggle-delete-property-mode">Exit Delete Mode</button>`:`<button type="button" class="outline-btn" data-a="add-property">${ico('plus',16)} Add Property</button><button type="button" class="action-btn" data-a="toggle-delete-property-mode">Delete Property</button>`}</div>${data.deletePropertyMode?`<p class="property-delete-hint">Choose the delete icon beside a property, or exit deletion mode.</p>`:''}</section>`:''}
+ <div class="property-address-bar">${address.map(([label,val])=>`<div><strong>${label}</strong><span>${escapeHtml(val||'Not entered')}</span></div>`).join('')}</div></section>`;
 }
 function propertyFieldError(field,message){
  const node=document.getElementById('property-'+field+'-error');
@@ -448,7 +448,7 @@ app.addEventListener('submit',e=>{
  if(old){data.properties=data.properties.map(p=>p.id===old.id?{...p,name,type,building,street,zone}:p);data.propertyId=old.id}
  else{const created={id:id(),name,type,building,street,zone,unit:''};data.properties=[...data.properties,created];data.propertyId=created.id}
  if(!persist()){data.properties=previousProperties;data.propertyId=previousId;return}
- data.showPropertyForm=false;data.editingPropertyId=null;render();toast(old?'Property updated':'Property added and selected');
+ data.showPropertyForm=false;data.editingPropertyId=null;data.propertyMenuOpen=false;render();toast(old?'Property updated':'Property added and selected');
 });
 app.addEventListener('click',async(e)=>{const button=e.target.closest('[data-a]');if(!button)return;const action=button.dataset.a,v=button.dataset.v;
 switch(action){
@@ -457,9 +457,10 @@ case 'toggle-property':if(data.showPropertyForm)closePropertyForm();else openPro
 case 'add-property':openPropertyForm();break;
 case 'edit-property':openPropertyForm(v);break;
 case 'close-property-form':closePropertyForm();break;
+case 'toggle-property-menu':data.propertyMenuOpen=!data.propertyMenuOpen;if(!data.propertyMenuOpen)data.deletePropertyMode=false;render();document.getElementById('main-property')?.focus();break;
 case 'toggle-delete-property-mode':data.deletePropertyMode=!data.deletePropertyMode;render();break;
 case 'delete-property':requestPropertyDeletion(v);break;
-case 'select-property':data.propertyId=v;persist();render();break;
+case 'select-property':if(!propertyById(v))break;data.propertyId=v;data.propertyMenuOpen=false;data.deletePropertyMode=false;persist();render();document.getElementById('main-property')?.focus();break;
 case 'view-photo':{const rec=data.records.find(r=>r.id===v);const photo=rec?.items.find(i=>i.key===button.dataset.k)?.photo;if(photo)openPhoto(photo,`${propName(rec.propertyId)} · ${parseKey(button.dataset.k).name} · ${fmtDate(rec.date)}`);break}
 case 'view-draft-photo':{const d=detail();if(d?.photo)openPhoto(d.photo,`${parseKey(data.selectedKey).name} · current inspection`);break}
 case 'set-type':data.type=v;persist();render();break;
